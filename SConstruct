@@ -4,13 +4,7 @@ import SCons.Defaults
 import SCons.Tool
 import SCons.Util
 
-arch = {
-	'i386':'x86',
-	'i486':'x86',
-	'i586':'x86',
-	'i686':'x86',
-	'x86_64':'amd64',
-}[os.uname()[4]]
+machine = os.uname()[4] == 'x86_64' and 'amd64' or 'x86'
 
 env = Environment(
 	CC = 'gcc',
@@ -19,7 +13,7 @@ env = Environment(
 	LINKFLAGS = [],
 	LIBS = ['dl', 'pthread'],
 	AS = 'yasm',
-	ASFLAGS = '-f elf -m '+arch
+	ASFLAGS = '-f elf -m '+machine
 )
 
 static_obj, shared_obj = SCons.Tool.createObjBuilders(env)
@@ -28,9 +22,9 @@ shared_obj.add_action('.asm', SCons.Defaults.ASAction)
 shared_obj.add_emitter('.asm', SCons.Defaults.SharedObjectEmitter)
 
 srcAssembler = [
-	'src/asm/'+arch+'/resample.asm',
-	'src/asm/'+arch+'/convert.asm',
-	'src/asm/'+arch+'/huffman.asm',
+	'src/asm/'+machine+'/resample.asm',
+	'src/asm/'+machine+'/convert.asm',
+	'src/asm/'+machine+'/huffman.asm',
 ]
 
 srcLibrary = [
@@ -57,16 +51,16 @@ env.Install('/usr/bin', objServer)
 
 env = env.Copy()
 env.Append(LIBS = ['GL', 'X11', 'seom'])
+env.Append(LIBPATH = [ '.' ])
 objPlayer = env.Program('seomPlayer', srcPlayer)
-env.Depends(objPlayer, '/usr/lib')
 env.Install('/usr/bin', objPlayer)
 
 for file in os.listdir('include/seom'):
-	if file[0] != '.':
-		path = os.path.join('include/seom', file)
+	path = os.path.join('include/seom', file)
+	if os.path.isfile(path):
 		env.Install('/usr/include/seom', path)
 
-test = env.Program('test', 'test.c')
+objTest = env.Program('test', 'test.c')
 
 env.Default([ objLibrary, objServer, objPlayer ])
 env.Alias('install', '/usr')
