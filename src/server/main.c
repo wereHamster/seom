@@ -36,7 +36,7 @@ static char *date(void)
 static int output(char *name)
 {
 	char path[4096];
-	snprintf(path, 4096, "%s/yukonOutput/%s.yukon", getenv("HOME"), name);
+	snprintf(path, 4096, "%s/seom/%s.seom", getenv("HOME"), name);
 	return open(path, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IRGRP | S_IROTH);
 }
 
