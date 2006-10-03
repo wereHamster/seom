@@ -61,9 +61,10 @@ objPlayer = env.Program('seomPlayer', srcPlayer)
 env.Depends(objPlayer, '/usr/'+arch[3])
 env.Install('/usr/bin', objPlayer)
 
-for entry in os.listdir('include/seom'):
-	path = os.path.join('include/seom', entry)
-	env.Install('/usr/include/seom', path)
+for file in os.listdir('include/seom'):
+	if file[0] != '.':
+		path = os.path.join('include/seom', file)
+		env.Install('/usr/include/seom', path)
 
 test = env.Program('test', 'test.c')
 
