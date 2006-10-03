@@ -5,7 +5,7 @@
 #include <seom/seom.h>
 
 typedef struct _seomClient seomClient;
-typedef struct _seomClientBuffer seomClientBuffer;
+typedef struct _seomClientFrame seomClientFrame;
 
 seomClient *seomClientCreate(Display *dpy, GLXDrawable drawable, const char *ns);
 void seomClientCapture(seomClient *client);
@@ -17,46 +17,28 @@ struct _seomClient {
 
 	pthread_mutex_t mutex;
 	pthread_t thread;
-
-	struct {
-		struct {
-			seomBuffer *videoBuffer;
-		} video;
-	} dataBuffers;
-
-	struct {
-		struct {
-			struct {
-				uint64_t width;
-				uint64_t height;
-			} drawableSize;
-			double captureInterval;
-			long downScale;
-			uint64_t offset[2];
-		} video;
-	} staticInfo;
-
-	struct {
-		struct {
-			double captureInterval;
-			double captureDelay;
-			uint64_t lastCapture;
-			double engineInterval;
-		} video;
-	} captureStatistics;
-
-	struct {
-		struct {
-			int outputFile;
-		} video;
-	} outputStreams;
 	
-	void (*scale)(uint32_t *in, uint32_t *out, uint64_t w, uint64_t h);
+	seomBuffer *buffer;
+	void (*copy)(uint8_t *out[3], uint32_t *in, uint64_t w, uint64_t h);
+	
+	uint64_t area[4];
+	uint64_t size[2];
+	
+	double interval;
+	
+	struct {
+		double captureInterval;
+		double captureDelay;
+		uint64_t lastCapture;
+		double engineInterval;
+	} stat;
+	
+	int socket;
 };
 
-struct _seomClientBuffer {
-	uint64_t timeStamp;
-	char bufferData[0];
+struct _seomClientFrame {
+	uint64_t pts;
+	uint8_t data[0];
 };
 
 void seomResample(uint32_t *out, uint32_t *in, uint64_t w, uint64_t h);

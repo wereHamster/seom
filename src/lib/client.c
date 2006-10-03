@@ -7,7 +7,7 @@ static uint8_t median(uint8_t L, uint8_t LT, uint8_t T)
 	return ( L + L+T-LT + T) / 3;
 }
 
-static void writePlane(seomClient *engine, uint8_t *plane, int width, int height)
+static void writePlane(seomClient *client, uint8_t *plane, int width, int height)
 {
 	static uint32_t out[1280*1024*8];
 	
@@ -28,8 +28,8 @@ static void writePlane(seomClient *engine, uint8_t *plane, int width, int height
 	extern struct seomCodecTable seomCodecTable;
 	uint32_t *end = seomCodecEncode(out, plane, plane + width * height, &seomCodecTable);
 	uint64_t size = (end - start) * 4;
-	write(engine->outputStreams.video.outputFile, &size, sizeof(size));
-	write(engine->outputStreams.video.outputFile, out, size);
+	write(client->socket, &size, sizeof(size));
+	write(client->socket, out, size);
 }
 
 static inline uint64_t read_time(void)
@@ -41,96 +41,76 @@ static inline uint64_t read_time(void)
 
 static void *seomClientThreadCallback(void *data)
 {
-	seomClient *engine = data;
+	seomClient *client = data;
 	
 	printf("seomClient thread started\n");
-
-	int srcWidth = engine->staticInfo.video.drawableSize.width;
-	int srcHeight = engine->staticInfo.video.drawableSize.height;
 	
-	int destWidth = engine->staticInfo.video.downScale ? srcWidth / 2 : srcWidth;
-	int destHeight = engine->staticInfo.video.downScale ? srcHeight / 2 : srcHeight;
-	
-	printf("seomClient: size: %d:%d => %d:%d\n", srcWidth, srcHeight, destWidth, destHeight);
-	
-	uint32_t *scaledFrame = malloc(destWidth * destHeight * 4);
+	printf("seomClient: size: %d:%d => %d:%d\n", client->area[2], client->area[3], client->size[0], client->size[1]);
 	
 	uint8_t *yuvPlanes[3];
-	yuvPlanes[0] = malloc(destWidth * destHeight * 3 / 2);
-	yuvPlanes[1] = yuvPlanes[0] + destWidth * destHeight;
-	yuvPlanes[2] = yuvPlanes[1] + destWidth * destHeight / 4;
-	
-	uint64_t timeStart;
-	uint64_t timeStop;
-	uint64_t timeElapsed;
+	yuvPlanes[0] = malloc(client->size[0] * client->size[1] * 3 / 2);
+	yuvPlanes[1] = yuvPlanes[0] + client->size[0] * client->size[1];
+	yuvPlanes[2] = yuvPlanes[1] + client->size[0] * client->size[1] / 4;
 
-	while (1) {
-		seomClientBuffer *videoBuffer = seomBufferTail(engine->dataBuffers.video.videoBuffer);
-		if (videoBuffer->timeStamp == 0) {
-			seomBufferTailAdvance(engine->dataBuffers.video.videoBuffer);
+	for (;;) {
+		uint64_t start = seomTime();
+		seomClientFrame *frame = seomBufferTail(client->buffer);
+		if (frame->pts == 0) {
+			seomBufferTailAdvance(client->buffer);
 			break;
 		}
-				
-		timeStart = seomTime();
 		
-		uint32_t *buf = (uint32_t *)&videoBuffer->bufferData[0];
+		client->copy(yuvPlanes, (uint32_t *)&frame->data[0], client->area[2], client->area[3]);
 		
-		engine->scale(buf, buf, srcWidth, srcHeight);
-		seomConvert(yuvPlanes, buf, destWidth, destHeight);
+		uint64_t tStamp = frame->pts;
 		
-		uint64_t tStamp = videoBuffer->timeStamp;
+		seomBufferTailAdvance(client->buffer);
 		
-		seomBufferTailAdvance(engine->dataBuffers.video.videoBuffer);
+		write(client->socket, &tStamp, sizeof(tStamp));
+		writePlane(client, yuvPlanes[0], client->size[0], client->size[1]);
+		writePlane(client, yuvPlanes[1], client->size[0] / 2, client->size[1] / 2);
+		writePlane(client, yuvPlanes[2], client->size[0] / 2, client->size[1] / 2);
 		
-		write(engine->outputStreams.video.outputFile, &tStamp, sizeof(tStamp));
-		writePlane(engine, yuvPlanes[0], destWidth, destHeight);
-		writePlane(engine, yuvPlanes[1], destWidth / 2, destHeight / 2);
-		writePlane(engine, yuvPlanes[2], destWidth / 2, destHeight / 2);
+		double tElapsed = (double) ( seomTime() - start );
 		
-		timeStop = seomTime();
-		timeElapsed = timeStop - timeStart;
-		
-		double tElapsed = (double) timeElapsed;
-		
-		pthread_mutex_lock(&engine->mutex);
-		double eInterval = engine->captureStatistics.video.engineInterval;
+		pthread_mutex_lock(&client->mutex);
+		double eInterval = client->stat.engineInterval;
 		double eDecay = 1.0 / 60.0;
-		engine->captureStatistics.video.engineInterval = eInterval * ( 1.0 - eDecay ) + tElapsed * eDecay;
-		pthread_mutex_unlock(&engine->mutex);
+		client->stat.engineInterval = eInterval * ( 1.0 - eDecay ) + tElapsed * eDecay;
+		pthread_mutex_unlock(&client->mutex);
 	}
 	
 	free(yuvPlanes[0]);
 }
 
 
-static void scale_full(uint32_t *out, uint32_t *in, uint64_t w, uint64_t h)
+static void copyFrameFull(uint8_t *out[3], uint32_t *in, uint64_t w, uint64_t h)
 {
-	memcpy(out, in, w * h * 4);
+	seomConvert(out, in, w, h);
 }
 
-static void scale_half(uint32_t *in, uint32_t *out, uint64_t w, uint64_t h)
+static void copyFrameHalf(uint8_t *out[3], uint32_t *in, uint64_t w, uint64_t h)
 {
-	seomResample(out, in, w, h);
+	seomResample(in, in, w, h);
+	seomConvert(out, in, w, h);
 }
-
 
 seomClient *seomClientCreate(Display *dpy, GLXDrawable drawable, const char *ns)
 {
-	Window rootWindow;
+	Window root;
 	int unused;
 	int width, height;
-	struct sockaddr_in addr;
 
-	XGetGeometry(dpy, drawable, &rootWindow, &unused, &unused, &width, &height, &unused, &unused);
+	XGetGeometry(dpy, drawable, &root, &unused, &unused, &width, &height, &unused, &unused);
 
-	struct timeval currentTime;
-	gettimeofday(&currentTime, 0);
-
-	seomClient *engine = malloc(sizeof(seomClient));
-	if (engine == NULL) {
-		printf("malloc\n");
+	seomClient *client = malloc(sizeof(seomClient));
+	if (client == NULL) {
+		printf("seomClientStart(): out of memory\n");
 		return NULL;
 	}
+	
+	client->dpy = dpy;
+	client->drawable = drawable;
 	
 	printf("seomClientStart(): %p - 0x%08x\n", dpy, drawable);
 	
@@ -140,33 +120,35 @@ seomClient *seomClientCreate(Display *dpy, GLXDrawable drawable, const char *ns)
 	if (insets[1] + insets[3] > width) {
 		printf("seomClientStart(): right+left insets > width\n");
 		insets[1] = insets[3] = 0;
-	} else if (insets[0] + insets[2] > width) {
+	} else if (insets[0] + insets[2] > height) {
 		printf("seomClientStart(): top+bottom insets > height\n");
 		insets[0] = insets[2] = 0;
 	}
 	
-	printf("seomClientStart(): %p, insets: %llu:%llu:%llu:%llu\n", engine, insets[0], insets[1], insets[2], insets[3]);
+	printf("seomClientStart(): %p, insets: %llu:%llu:%llu:%llu\n", client, insets[0], insets[1], insets[2], insets[3]);
 	
-	width = width - insets[1] - insets[3];
-	height = height - insets[0] - insets[2];
+	client->area[0] = insets[3];
+	client->area[1] = insets[2];
+	client->area[2] = width - insets[1] - insets[3];
+	client->area[3] = height - insets[0] - insets[2];
 	
 	char scale[64];
 	seomConfigScale(ns, scale);
-	engine->staticInfo.video.downScale = strcmp(scale, "full");
-	printf("scale: %s\n", scale);
+	printf("seomClientStart(): %s\n", scale);
 	
-	if (engine->staticInfo.video.downScale) {
-		width &= ~(3);
-		height &= ~(3);
-		engine->scale = scale_half;
+	if (strcmp(scale, "full") == 0) {
+		client->area[2] &= ~(1);
+		client->area[3] &= ~(1);
+		client->size[0] = client->area[2];
+		client->size[1] = client->area[3];
+		client->copy = copyFrameFull;
 	} else {
-		width &= ~(1);
-		height &= ~(1);
-		engine->scale = scale_full;
+		client->area[2] &= ~(3);
+		client->area[3] &= ~(3);
+		client->size[0] = client->area[2] >> 1;
+		client->size[1] = client->area[3] >> 1;
+		client->copy = copyFrameHalf;		
 	}
-	
-	engine->staticInfo.video.offset[0] = insets[3];
-	engine->staticInfo.video.offset[1] = insets[2];
 	
 	char server[256];
 	seomConfigServer(ns, server);
@@ -181,64 +163,52 @@ seomClient *seomClientCreate(Display *dpy, GLXDrawable drawable, const char *ns)
 	printf("server address is: %s:%d\n", serverAddr, serverPort);
 	
 	int fdSocket = socket(AF_INET, SOCK_STREAM, 0);
+	struct sockaddr_in addr;
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(serverPort);
 	addr.sin_addr.s_addr = inet_addr(serverAddr);
 
 	if (connect(fdSocket, &addr, sizeof(addr)) == 0) {
-		engine->outputStreams.video.outputFile = fdSocket;
+		client->socket = fdSocket;
 		printf("connection to server established\n");
 	} else {
 		close(fdSocket);
 		perror("failed to connect to the server");
 		return NULL;
 	}
-	
-	engine->dpy = dpy;
-	engine->drawable = drawable;
 
-	engine->dataBuffers.video.videoBuffer = seomBufferCreate(sizeof(seomClientBuffer) + width * height * 4, 16);	
-	
-	engine->staticInfo.video.drawableSize.width = width;
-	engine->staticInfo.video.drawableSize.height = height;
+	client->buffer = seomBufferCreate(sizeof(seomClientFrame) + client->area[2] * client->area[3] * 4, 16);	
 
-	seomConfigInterval(ns, &engine->staticInfo.video.captureInterval);
+	seomConfigInterval(ns, &client->interval);
+	printf("seomClientStart(): Interval: %f\n", client->interval);
 	
-	printf("interval: %f\n", engine->staticInfo.video.captureInterval);
-	
-	engine->captureStatistics.video.captureInterval = engine->staticInfo.video.captureInterval;
-	engine->captureStatistics.video.engineInterval = engine->staticInfo.video.captureInterval;
-	engine->captureStatistics.video.captureDelay = 0.0;
+	client->stat.captureInterval = client->interval;
+	client->stat.engineInterval = client->interval;
+	client->stat.captureDelay = 0.0;
 
-	engine->captureStatistics.video.lastCapture = seomTime();
+	client->stat.lastCapture = seomTime();
 	
-	pthread_create(&engine->thread, NULL, seomClientThreadCallback, engine);
-
-	uint64_t streamWidth = (uint64_t) engine->staticInfo.video.downScale ? width / 2 : width;
-	uint64_t streamHeight = (uint64_t) engine->staticInfo.video.downScale ? height / 2 : height;
-	write(engine->outputStreams.video.outputFile, &streamWidth, sizeof(streamWidth));
-	write(engine->outputStreams.video.outputFile, &streamHeight, sizeof(streamHeight));
-
-	printf("seomClientStart(): %p, capturing %llu:%llu\n", engine, streamWidth, streamHeight);
+	write(client->socket, client->size, sizeof(client->size));
 	
-	pthread_mutex_init(&engine->mutex, NULL);
+	pthread_mutex_init(&client->mutex, NULL);
+	pthread_create(&client->thread, NULL, seomClientThreadCallback, client);
 	
-	return engine;
+	return client;
 }
 
 void seomClientDestroy(seomClient *client)
 {
 	printf("seomClientDestroy(): %p\n", client);
 	
-	seomClientBuffer *videoBuffer = seomBufferHead(client->dataBuffers.video.videoBuffer);
-	videoBuffer->timeStamp = 0;
-	seomBufferHeadAdvance(client->dataBuffers.video.videoBuffer);
+	seomClientFrame *frame = seomBufferHead(client->buffer);
+	frame->pts = 0;
+	seomBufferHeadAdvance(client->buffer);
 
-	do { } while (seomBufferStatus(client->dataBuffers.video.videoBuffer) < 16);
+	do { } while (seomBufferStatus(client->buffer) < 16);
 	
-	seomBufferDestroy(client->dataBuffers.video.videoBuffer);
+	seomBufferDestroy(client->buffer);
 	
-	close(client->outputStreams.video.outputFile);
+	close(client->socket);
 
 	pthread_join(client->thread, NULL);
 	pthread_mutex_destroy(&client->mutex);
@@ -249,80 +219,59 @@ void seomClientDestroy(seomClient *client)
 
 void seomClientCapture(seomClient *client)
 {
-	uint64_t timeCurrent;
-	uint64_t timeElapsed;
-
-	Window rootWindow;
-	int unused;
-	int width;
-	int height;
-	
-	//printf("drawable: %lx\n", drawable);
-
 	Display *dpy = client->dpy;
 	GLXDrawable drawale = client->drawable;
-	seomClient *engine = client;
 
-	width = engine->staticInfo.video.drawableSize.width;
-	height = engine->staticInfo.video.drawableSize.height;
-
-	uint64_t bufferStatus = seomBufferStatus(engine->dataBuffers.video.videoBuffer);
+	uint64_t bufferStatus = seomBufferStatus(client->buffer);
 	
-	pthread_mutex_lock(&engine->mutex);
-	double eInterval = engine->captureStatistics.video.engineInterval;
-	pthread_mutex_unlock(&engine->mutex);
+	pthread_mutex_lock(&client->mutex);
+	double eInterval = client->stat.engineInterval;
+	pthread_mutex_unlock(&client->mutex);
 	
-	double cInterval = engine->captureStatistics.video.captureInterval;
+	double cInterval = client->stat.captureInterval;
 	int64_t bStatus = 8 - bufferStatus;
 	double iCorrection = ( eInterval + bStatus * 100 ) - cInterval;
-	engine->captureStatistics.video.captureInterval = cInterval * 0.9 + ( cInterval + iCorrection ) * 0.1;
-	if (engine->captureStatistics.video.captureInterval < engine->staticInfo.video.captureInterval) {
-		engine->captureStatistics.video.captureInterval = engine->staticInfo.video.captureInterval;
+	client->stat.captureInterval = cInterval * 0.9 + ( cInterval + iCorrection ) * 0.1;
+	if (client->stat.captureInterval < client->interval) {
+		client->stat.captureInterval = client->interval;
 	}
 
-	timeCurrent = seomTime();
-	timeElapsed = timeCurrent - engine->captureStatistics.video.lastCapture;
-	engine->captureStatistics.video.lastCapture = timeCurrent;
+	uint64_t timeCurrent = seomTime();
+	uint64_t timeElapsed = timeCurrent - client->stat.lastCapture;
+	client->stat.lastCapture = timeCurrent;
 	
 	double tElapsed = (double) timeElapsed;
-	double tDelay = engine->captureStatistics.video.captureDelay - tElapsed;
-	
-	//static char buf[1024];
-	//int ret = sprintf(buf, "%llu %f %f %f %f\n", bufferStatus, eInterval, engine->captureStatistics.video.captureInterval, iCorrection, tElapsed);
-	//write(engine->statFile, buf, ret);
+	double tDelay = client->stat.captureDelay - tElapsed;
 
-	double delayMargin = engine->captureStatistics.video.captureInterval / 10.0;
+	double delayMargin = client->stat.captureInterval / 10.0;
 	if (tDelay < delayMargin) {
 		if (bufferStatus) {
-			seomClientBuffer *videoBuffer = seomBufferHead(engine->dataBuffers.video.videoBuffer);
-
-			videoBuffer->timeStamp = timeCurrent;
-			uint64_t x = engine->staticInfo.video.offset[0];
-			uint64_t y = engine->staticInfo.video.offset[1];
-			glReadPixels(x, y, width, height, GL_BGRA, GL_UNSIGNED_BYTE, &videoBuffer->bufferData[0]);
-
-			seomBufferHeadAdvance(engine->dataBuffers.video.videoBuffer);
-		//	printf("timeElapsed.usec: %llu\n", timeElapsed.usec);
+			uint64_t *area = client->area;
+			
+			seomClientFrame *frame = seomBufferHead(client->buffer);
+			
+			frame->pts = timeCurrent;
+			glReadPixels(area[0], area[1], area[2], area[3], GL_BGRA, GL_UNSIGNED_BYTE, &frame->data[0]);
+			
+			seomBufferHeadAdvance(client->buffer);
 
 			if (tDelay < 0) { // frame too late
-				if (engine->captureStatistics.video.captureInterval + tDelay < 0.0) { // lag? drop frame(s) and return to normal frame interval
-					engine->captureStatistics.video.captureDelay = engine->captureStatistics.video.captureInterval;
+				if (client->stat.captureInterval + tDelay < 0.0) { // lag? drop frame(s) and return to normal frame interval
+					client->stat.captureDelay = client->stat.captureInterval;
 				} else { // frame too late, adjust capture interval
-					engine->captureStatistics.video.captureDelay = engine->captureStatistics.video.captureInterval + tDelay;
+					client->stat.captureDelay = client->stat.captureInterval + tDelay;
 				}
 			} else { // frame too early, adjust capture interval
-				engine->captureStatistics.video.captureDelay = engine->captureStatistics.video.captureInterval + tDelay;
+				client->stat.captureDelay = client->stat.captureInterval + tDelay;
 			}
 		} else { // encoder too slow, try next frame
 			if (tDelay < 0) { // we are already too late
-				engine->captureStatistics.video.captureDelay = 0;
+				client->stat.captureDelay = 0;
 			} else { // we get another chance to capture in time
-				engine->captureStatistics.video.captureDelay = tDelay;
+				client->stat.captureDelay = tDelay;
 			}
 		}
 	} else { // normal update
-		engine->captureStatistics.video.captureDelay = tDelay;
+		client->stat.captureDelay = tDelay;
 	}
-
-//	printf("bufferStatus: %llu, captureInterval: %llu, captureDelay: %llu\n\n", bufferStatus, engine->captureStatistics.video.captureInterval, engine->captureStatistics.video.captureDelay);
 }
