@@ -2,12 +2,12 @@
 BITS 32
 
 SECTION .text
-global seomResample
 
 ; edi : out
 ; esi : in
 ; edx : width
 ; ecx : height
+global seomResample:function
 seomResample:
 %define ps 20
     push    edi

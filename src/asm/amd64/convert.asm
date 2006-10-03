@@ -8,12 +8,12 @@ uMul: dw   112,      -74,       -38,      0
 vMul: dw   -18,      -94,       112,      0
 
 SECTION .text
-global seomConvert
 
 ; rdi : out[3]
 ; rsi : in
 ; rdx : width
 ; rcx : height
+global seomConvert: function
 seomConvert:
     push    r12
     push    r13

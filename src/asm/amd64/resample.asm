@@ -2,12 +2,12 @@
 BITS 64
 
 SECTION .text
-global seomResample
 
 ; rdi : out
 ; rsi : in
 ; rdx : width
 ; rcx : height
+global seomResample: function
 seomResample:
     imul    rdx,4             ; rdx = width in bytes
     imul    rcx,rdx           ; rcx = size of buffer in bytes

@@ -8,12 +8,12 @@ uMul: dw   112,      -74,       -38,      0
 vMul: dw   -18,      -94,       112,      0
 
 SECTION .text
-global seomConvert
 
 ; edi : out[3]
 ; esi : in
 ; edx : width
 ; ecx : height
+global seomConvert:function
 seomConvert:
 %define ps 24
     push    edi

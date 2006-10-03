@@ -23,8 +23,8 @@ seomCodecEncode:
     xor     ecx,ecx
     mov     cl,byte [esi]      ; load byte
     mov     ecx, [ebx+4*ecx]   ; load huffman code/length
-    add        dl,cl              ; add code legth into 'dl'
-    jl        .nostore           ; enough space in the register?
+    add     dl,cl              ; add code legth into 'dl'
+    jl      .nostore           ; enough space in the register?
 
     sub     cl,dl              ; no, put in what fits in and adjust 'cl'
     sub     dl,32
