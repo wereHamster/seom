@@ -5,21 +5,21 @@ import SCons.Tool
 import SCons.Util
 
 arch = {
-	'i386':('x86','elf32','-m32','lib32'),
-	'i486':('x86','elf32','-m32','lib32'),
-	'i586':('x86','elf32','-m32','lib32'),
-	'i686':('x86','elf32','-m32','lib32'),
-	'x86_64':('amd64','elf64','-m64','lib64'),
-}[os.getenv('ARCH') or os.uname()[4]]
+	'i386':'x86',
+	'i486':'x86',
+	'i586':'x86',
+	'i686':'x86',
+	'x86_64':'amd64',
+}[os.uname()[4]]
 
 env = Environment(
 	CC = 'gcc',
 	CPPPATH = ['#include'],
-	CCFLAGS = ['-std=c99', '-pipe', '-O3', arch[2]],
-	LINKFLAGS = [arch[2]],
+	CCFLAGS = ['-std=c99', '-pipe', '-O3'],
+	LINKFLAGS = [],
 	LIBS = ['dl', 'pthread'],
 	AS = 'yasm',
-	ASFLAGS = '-f '+arch[1]
+	ASFLAGS = '-f elf -m '+arch
 )
 
 static_obj, shared_obj = SCons.Tool.createObjBuilders(env)
@@ -28,9 +28,9 @@ shared_obj.add_action('.asm', SCons.Defaults.ASAction)
 shared_obj.add_emitter('.asm', SCons.Defaults.SharedObjectEmitter)
 
 srcAssembler = [
-	'src/asm/'+arch[0]+'/resample.asm',
-	'src/asm/'+arch[0]+'/convert.asm',
-	'src/asm/'+arch[0]+'/huffman.asm',
+	'src/asm/'+arch+'/resample.asm',
+	'src/asm/'+arch+'/convert.asm',
+	'src/asm/'+arch+'/huffman.asm',
 ]
 
 srcLibrary = [
@@ -50,7 +50,7 @@ srcPlayer = [
 ]
 
 objLibrary = env.SharedLibrary('seom', srcLibrary + srcAssembler)
-env.Install('/usr/'+arch[3], objLibrary)
+env.Install('/usr/lib', objLibrary)
 
 objServer = env.Program('seomServer', srcServer)
 env.Install('/usr/bin', objServer)
@@ -58,7 +58,7 @@ env.Install('/usr/bin', objServer)
 env = env.Copy()
 env.Append(LIBS = ['GL', 'X11', 'seom'])
 objPlayer = env.Program('seomPlayer', srcPlayer)
-env.Depends(objPlayer, '/usr/'+arch[3])
+env.Depends(objPlayer, '/usr/lib')
 env.Install('/usr/bin', objPlayer)
 
 for file in os.listdir('include/seom'):
