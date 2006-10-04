@@ -202,9 +202,9 @@ int main(int argc, char *argv[]) {
 	printf("%llu frames, %llu seconds, %.1f fps, %.1f MiB/s\n", cFrameTotal, tt, fps, mbs);
 
 	uint64_t cTimeTotal = *(uint64_t *) (sourceData + statBuffer.st_size - (width * height * 3 / 2 + sizeof(uint64_t))) - *(uint64_t *) currentPosition;
-	printf("size: %llu:%llu, cFrameTotal: %llu, time: %llu\n", width, height, cFrameTotal, cTimeTotal / 1000000);
+	printf("size: %u:%u, cFrameTotal: %llu, time: %llu\n", width, height, cFrameTotal, cTimeTotal / 1000000);
 
-	uint64_t rawFrames = (statBuffer.st_size - 2 * sizeof(uint64_t)) / (width * height * 3 / 2 + sizeof(uint64_t));
+	uint64_t rawFrames = (statBuffer.st_size - 2 * sizeof(uint32_t)) / (width * height * 3 / 2 + sizeof(uint64_t));
 	printf("ratio: %.3f\n", (float)rawFrames / cFrameTotal);
 
 	
