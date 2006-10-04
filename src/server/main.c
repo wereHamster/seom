@@ -27,6 +27,7 @@
 #include <getopt.h>
 #include <signal.h>
 
+static const char rev[] = "$Revision$";
 static const int version[3] = { 0, 1, 0 };
 
 static char seomOutput[1024];
@@ -180,7 +181,7 @@ int main(int argc, char *argv[])
 				snprintf(seomOutput, sizeof(seomOutput), "%s", optarg);
 				break;
 			case 'v':
-				printf("%d.%d.%d\n", version[0], version[1], version[2]);
+				printf("%d.%d.%d (%s)\n", version[0], version[1], version[2], rev);
 				exit(0);
 			case 'h':
 				help();
@@ -194,7 +195,7 @@ int main(int argc, char *argv[])
 		}
  	}
  	
-	printf("seomServer running on port %d using output directory %s\n", port, seomOutput);
+	printf("[%s]: running on port %d using output directory %s\n", date(), port, seomOutput);
 
 	signal(SIGINT, sighandler);
 	
