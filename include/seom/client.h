@@ -41,7 +41,7 @@ struct _seomClientFrame {
 	uint8_t data[0];
 };
 
-void seomResample(uint32_t *out, uint32_t *in, uint64_t w, uint64_t h);
+void seomResample(uint32_t *buf, uint64_t w, uint64_t h);
 void seomConvert(uint8_t *out[3], uint32_t *in, uint64_t w, uint64_t h);
 
 

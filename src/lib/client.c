@@ -91,7 +91,7 @@ static void copyFrameFull(uint8_t *out[3], uint32_t *in, uint64_t w, uint64_t h)
 
 static void copyFrameHalf(uint8_t *out[3], uint32_t *in, uint64_t w, uint64_t h)
 {
-	seomResample(in, in, w, h);
+	seomResample(in, w, h);
 	seomConvert(out, in, w / 2, h / 2);
 }
 

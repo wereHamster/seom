@@ -3,29 +3,29 @@ BITS 64
 
 SECTION .text
 
-; rdi : out
-; rsi : in
-; rdx : width
-; rcx : height
+; rdi : buf
+; rsi : width
+; rdx : height
 global seomResample: function
 seomResample:
-    imul    rdx,4             ; rdx = width in bytes
-    imul    rcx,rdx           ; rcx = size of buffer in bytes
-    lea     r11,[rsi+rcx]     ; r11 = end of buffer
+    imul    rsi,4             ; rsi = width in bytes
+    imul    rdx,rsi           ; rdx = size of buffer in bytes
+    lea     rcx,[rdi+rdx]     ; rcx = end of buffer
     pxor    mm7,mm7
-    lea     rcx,[rsi+rdx]     ; rcx = end of 1st row
+    mov     r8,rdi            ; r8 = 1st row
+    lea     rdx,[r8+rsi]      ; rdx = end of 1st row
 
 .L4:
-    lea     rax,[rsi+rdx]     ; rax = rsi + one row
+    lea     r9,[r8+rsi]       ; r9 = 2nd row
 
 .L5:
-    movd      mm0,[rsi]
+    movd      mm0,[r8]
     punpcklbw mm0,mm7
-    movd      mm1,[rsi+4]
+    movd      mm1,[r8+4]
     punpcklbw mm1,mm7
-    movd      mm2,[rax]
+    movd      mm2,[r9]
     punpcklbw mm2,mm7
-    movd      mm3,[rax+4]
+    movd      mm3,[r9+4]
     punpcklbw mm3,mm7
 
     paddusw   mm0,mm1
@@ -35,18 +35,18 @@ seomResample:
     packuswb  mm0,mm7
     movd      [rdi],mm0
     
-    add     rsi,8
-    add     rax,8
+    add     r8,8
+    add     r9,8
     add     rdi,4
     
-    cmp     rsi,rcx
+    cmp     r8,rdx
     jne    .L5
 
 .L6:
-    cmp     r11,rax           ; end of buffer?
+    cmp     rcx,r9            ; end of buffer?
     je     .L9
-    mov     rsi,rax           ; rsi = 1st row
-    lea     rcx,[rsi+rdx]     ; rcx = end of 1st row
+    mov     r8,r9             ; r8 = 1st row
+    lea     rdx,[r8+rsi]      ; rdx = end of 1st row
     jmp    .L4
 
 .L9:
