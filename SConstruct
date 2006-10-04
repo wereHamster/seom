@@ -49,15 +49,19 @@ srcPlayer = [
 	'src/player/colorspace.c',
 ]
 
-objLibrary = env.SharedLibrary('seom', srcLibrary + srcAssembler)
-env.Install('/usr/lib', objLibrary)
+objLibraryShared = env.SharedLibrary('seom', srcLibrary + srcAssembler)
+env.Install('/usr/lib', objLibraryShared)
+env.Alias('shared', objLibraryShared)
+
+objLibraryStatic = env.StaticLibrary('seom', srcLibrary + srcAssembler)
+env.Install('/usr/lib', objLibraryStatic)
+env.Alias('static', objLibraryStatic)
 
 objServer = env.Program('seomServer', srcServer)
 env.Install('/usr/bin', objServer)
 
 env = env.Copy()
-env.Append(LIBS = ['GL', 'X11', 'seom'])
-env.Append(LIBPATH = [ '.' ])
+env.Append(LIBS = ['GL', 'X11', objLibraryStatic])
 objPlayer = env.Program('seomPlayer', srcPlayer)
 env.Install('/usr/bin', objPlayer)
 
@@ -69,5 +73,5 @@ for file in os.listdir('include/seom'):
 	if os.path.isfile(path):
 		env.Install('/usr/include/seom', path)
 
-env.Default([ objLibrary, objServer, objPlayer, objExample ])
+env.Default([ objLibraryShared, objLibraryStatic, objServer, objPlayer, objExample ])
 env.Alias('install', '/usr')
