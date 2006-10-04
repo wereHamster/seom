@@ -25,7 +25,6 @@ static void writePlane(seomClient *client, uint8_t *plane, int width, int height
 #undef src
 	
 	uint32_t *start = out;
-	extern struct seomCodecTable seomCodecTable;
 	uint32_t *end = seomCodecEncode(out, plane, plane + width * height, &seomCodecTable);
 	uint64_t size = (end - start) * 4;
 	write(client->socket, &size, sizeof(size));
@@ -77,6 +76,8 @@ static void *seomClientThreadCallback(void *data)
 	}
 	
 	free(yuvPlanes[0]);
+	
+	return NULL;
 }
 
 
@@ -94,10 +95,10 @@ static void copyFrameHalf(uint8_t *out[3], uint32_t *in, uint32_t w, uint32_t h)
 seomClient *seomClientCreate(Display *dpy, GLXDrawable drawable, const char *ns)
 {
 	Window root;
-	int unused;
-	int width, height;
-
-	XGetGeometry(dpy, drawable, &root, &unused, &unused, &width, &height, &unused, &unused);
+	unsigned int width, height, uunused;
+	int sunused;
+ 
+	XGetGeometry(dpy, drawable, &root, &sunused, &sunused, &width, &height, &uunused, &uunused);
 
 	seomClient *client = malloc(sizeof(seomClient));
 	if (client == NULL) {

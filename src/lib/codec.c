@@ -178,4 +178,6 @@ uint8_t *seomCodecDecodeReference(uint8_t *dst, uint32_t *src, uint8_t *end, str
 			break;
 		}
 	}
+	
+	return end;
 }
