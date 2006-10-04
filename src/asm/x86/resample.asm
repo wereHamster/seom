@@ -54,7 +54,7 @@ seomResample:
     jne    .L5
 
 .L6:
-    cmp     ecx,eax           ; end of buffer?
+    cmp     ecx,ebx           ; end of buffer?
     je     .L9
     mov     eax,ebx           ; eax = 1st row
     lea     edx,[eax+esi]     ; edx = end of 1st row
