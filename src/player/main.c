@@ -159,10 +159,10 @@ int main(int argc, char *argv[]) {
 
 	unsigned char *currentPosition = sourceData;
 
-	uint64_t width = *(uint64_t *) currentPosition;
-	currentPosition += sizeof(uint64_t);
-	uint64_t height = *(uint64_t *) currentPosition;
-	currentPosition += sizeof(uint64_t);
+	uint32_t width = ntohl(*(uint32_t *) currentPosition);
+	currentPosition += sizeof(uint32_t);
+	uint32_t height = ntohl(*(uint32_t *) currentPosition);
+	currentPosition += sizeof(uint32_t);
 
 	uint64_t cFrameSize = 0;
 	uint64_t cFrameCount = 0;
@@ -394,7 +394,7 @@ int main(int argc, char *argv[]) {
 		}
 		
 		if (1) {
-			currentPosition = sourceData + 2 * sizeof(uint64_t);
+			currentPosition = sourceData + 2 * sizeof(uint32_t);
 			for (int i = 0; i < fIndex; ++i) {
 				pts = *(uint64_t *) currentPosition;
 				currentPosition += sizeof(uint64_t);

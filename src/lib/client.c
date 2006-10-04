@@ -84,12 +84,12 @@ static void *seomClientThreadCallback(void *data)
 }
 
 
-static void copyFrameFull(uint8_t *out[3], uint32_t *in, uint64_t w, uint64_t h)
+static void copyFrameFull(uint8_t *out[3], uint32_t *in, uint32_t w, uint32_t h)
 {
 	seomConvert(out, in, w, h);
 }
 
-static void copyFrameHalf(uint8_t *out[3], uint32_t *in, uint64_t w, uint64_t h)
+static void copyFrameHalf(uint8_t *out[3], uint32_t *in, uint32_t w, uint32_t h)
 {
 	seomResample(in, w, h);
 	seomConvert(out, in, w / 2, h / 2);
@@ -114,7 +114,7 @@ seomClient *seomClientCreate(Display *dpy, GLXDrawable drawable, const char *ns)
 	
 	printf("seomClientStart(): %p - 0x%08x\n", dpy, drawable);
 	
-	uint64_t insets[4];
+	uint32_t insets[4];
 	seomConfigInsets(ns, insets);
 	
 	if (insets[1] + insets[3] > width) {
@@ -188,7 +188,9 @@ seomClient *seomClientCreate(Display *dpy, GLXDrawable drawable, const char *ns)
 
 	client->stat.lastCapture = seomTime();
 	
-	write(client->socket, client->size, sizeof(client->size));
+	uint32_t size[2] = { htonl(client->size[0]), htonl(client->size[1]) };
+	
+	write(client->socket, size, sizeof(size));
 	
 	pthread_mutex_init(&client->mutex, NULL);
 	pthread_create(&client->thread, NULL, seomClientThreadCallback, client);
@@ -246,7 +248,7 @@ void seomClientCapture(seomClient *client)
 	double delayMargin = client->stat.captureInterval / 10.0;
 	if (tDelay < delayMargin) {
 		if (bufferStatus) {
-			uint64_t *area = client->area;
+			uint32_t *area = client->area;
 			
 			seomClientFrame *frame = seomBufferHead(client->buffer);
 			

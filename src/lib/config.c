@@ -52,7 +52,7 @@ void seomConfigScale(const char *ns, char scale[64])
 	}
 }
 
-void seomConfigInsets(const char *ns, uint64_t v[4])
+void seomConfigInsets(const char *ns, uint32_t v[4])
 {
 	char insets[64];
 	

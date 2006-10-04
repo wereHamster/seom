@@ -5,7 +5,7 @@ SECTION .text
 
 ; [esp+ 4] : buf
 ; [esp+ 8] : width
-; [esp+16] : height
+; [esp+12] : height
 global seomResample:function
 seomResample:
 %define ps 20
@@ -17,7 +17,7 @@ seomResample:
 
     mov     edi, [esp+ps+ 4]
     mov     esi, [esp+ps+ 8]
-    mov     edx, [esp+ps+16]
+    mov     edx, [esp+ps+12]
     
     imul    esi,4             ; esi = width in bytes
     imul    edx,esi           ; edx = size of buffer in bytes
