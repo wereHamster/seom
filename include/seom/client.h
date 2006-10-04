@@ -19,10 +19,10 @@ struct _seomClient {
 	pthread_t thread;
 	
 	seomBuffer *buffer;
-	void (*copy)(uint8_t *out[3], uint32_t *in, uint64_t w, uint64_t h);
+	void (*copy)(uint8_t *out[3], uint32_t *in, uint32_t w, uint32_t h);
 	
-	uint64_t area[4];
-	uint64_t size[2];
+	uint32_t area[4];
+	uint32_t size[2];
 	
 	double interval;
 	
@@ -41,8 +41,8 @@ struct _seomClientFrame {
 	uint8_t data[0];
 };
 
-void seomResample(uint32_t *buf, uint64_t w, uint64_t h);
-void seomConvert(uint8_t *out[3], uint32_t *in, uint64_t w, uint64_t h);
+void seomResample(uint32_t *buf, uint32_t w, uint32_t h);
+void seomConvert(uint8_t *out[3], uint32_t *in, uint32_t w, uint32_t h);
 
 
 #endif /* __SEOM_CLIENT_H__ */
