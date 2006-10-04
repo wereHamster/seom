@@ -115,7 +115,7 @@ uint32_t *seomCodecEncodeReference(uint32_t * dst, uint8_t * src, uint8_t * end,
 	uint64_t qword = 0;
 	while (src < end) {
 		uint8_t sym = *src++;
-		uint32_t code = seomCodecTable.codes[sym];
+		uint32_t code = tbl->codes[sym];
 		int len = code & 0xff;
 		qword &= 0xffffffff00000000;
 		qword |= code;
@@ -164,7 +164,7 @@ uint8_t *seomCodecDecodeReference(uint8_t *dst, uint32_t *src, uint8_t *end, str
 
 		val -= (1 << firstbit);
 
-		uint8_t *table = seomCodecTable.pointers[firstbit];
+		uint8_t *table = tbl->pointers[firstbit];
 		//printf("length: %d\n", 32-table[0]);
 
 		val >>= table[0];
@@ -173,7 +173,7 @@ uint8_t *seomCodecDecodeReference(uint8_t *dst, uint32_t *src, uint8_t *end, str
 		uint8_t sym = table[1 + val];
 		//printf("symbol: 0x%02x\n", sym);
 		dst[opos++] = sym;
-		bpos += seomCodecTable.codes[sym] & 0xff;
+		bpos += tbl->codes[sym] & 0xff;
 		if (dst + opos >= end) {
 			break;
 		}

@@ -7,7 +7,7 @@ import SCons.Util
 env = Environment(
 	CC = 'gcc',
 	CPPPATH = ['#include'],
-	CCFLAGS = ['-std=c99', '-pipe', '-O3'],
+	CCFLAGS = ['-std=c99', '-pipe', '-O3', '-W', '-Wall'],
 	LIBS = ['dl', 'pthread'],
 )
 

@@ -26,14 +26,14 @@ static uint8_t *rgbFrame;
 static Display *dpy = NULL;
 static Window win = 0;
 
-static Bool WaitFor__MapNotify(Display * d, XEvent * e, char *arg)
+static Bool WaitFor__MapNotify(Display *dpy, XEvent *e, char *arg)
 {
-	return (e->type == MapNotify) && (e->xmap.window == (Window) arg);
+	return dpy && (e->type == MapNotify) && (e->xmap.window == (Window) arg);
 }
 
-static Bool WaitFor__ConfigureNotify(Display * d, XEvent * e, char *arg)
+static Bool WaitFor__ConfigureNotify(Display *dpy, XEvent *e, char *arg)
 {
-	return (e->type == ConfigureNotify) && (e->xconfigure.window == (Window) arg);
+	return dpy && (e->type == ConfigureNotify) && (e->xconfigure.window == (Window) arg);
 }
 
 static void glCaptureCreateWindow(int width, int height)
@@ -145,6 +145,11 @@ static void DrawBar(float val)
 }
 
 int main(int argc, char *argv[]) {
+	if (argc < 2) {
+		printf("Usage: %s [seom file]\n", argv[0]);
+		return 0;
+	}
+	
 	int inFile = open(argv[1], O_RDONLY);
 	if (inFile == -1) {
 		perror("can't open infile");
@@ -165,10 +170,7 @@ int main(int argc, char *argv[]) {
 	uint32_t height = ntohl(*(uint32_t *) currentPosition);
 	currentPosition += sizeof(uint32_t);
 
-	uint64_t cFrameSize = 0;
-	uint64_t cFrameCount = 0;
 	uint64_t cFrameTotal = 0;
-
 	unsigned char *mem = currentPosition;
 	uint64_t time[2];
 	time[0] = *(uint64_t *) mem;
@@ -253,7 +255,6 @@ int main(int argc, char *argv[]) {
 	barTimer.tv_sec -= 10;
 	
 	for (;;) {
-		unsigned char *lastFrame = currentPosition;
 		pts = *(uint64_t *) currentPosition;
 		currentPosition += sizeof(uint64_t);
 		

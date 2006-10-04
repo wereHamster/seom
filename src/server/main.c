@@ -41,9 +41,10 @@ static struct option seomServerOptions[] = {
 
 static void sighandler(int signum)
 {
-	printf("Closing cleanly...\n");
-
-	exit(0);
+	if (signum == SIGINT) {
+		printf("Closing cleanly...\n");
+		exit(0);
+	}
 }
 
 static void help(void)

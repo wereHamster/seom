@@ -209,9 +209,6 @@ void seomClientDestroy(seomClient *client)
 
 void seomClientCapture(seomClient *client)
 {
-	Display *dpy = client->dpy;
-	GLXDrawable drawale = client->drawable;
-
 	uint64_t bufferStatus = seomBufferStatus(client->buffer);
 	
 	pthread_mutex_lock(&client->mutex);
