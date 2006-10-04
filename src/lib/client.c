@@ -45,7 +45,7 @@ static void *seomClientThreadCallback(void *data)
 	
 	printf("seomClient thread started\n");
 	
-	printf("seomClient: size: %d:%d => %d:%d\n", client->area[2], client->area[3], client->size[0], client->size[1]);
+	printf("seomClient: size: %llu:%llu => %llu:%llu\n", client->area[2], client->area[3], client->size[0], client->size[1]);
 	
 	uint8_t *yuvPlanes[3];
 	yuvPlanes[0] = malloc(client->size[0] * client->size[1] * 3 / 2);
@@ -92,7 +92,7 @@ static void copyFrameFull(uint8_t *out[3], uint32_t *in, uint64_t w, uint64_t h)
 static void copyFrameHalf(uint8_t *out[3], uint32_t *in, uint64_t w, uint64_t h)
 {
 	seomResample(in, in, w, h);
-	seomConvert(out, in, w, h);
+	seomConvert(out, in, w / 2, h / 2);
 }
 
 seomClient *seomClientCreate(Display *dpy, GLXDrawable drawable, const char *ns)
