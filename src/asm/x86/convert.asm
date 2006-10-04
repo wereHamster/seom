@@ -26,7 +26,7 @@ seomConvert:
     mov     edi, [esp+ps+ 4]
     mov     esi, [esp+ps+ 8]
     mov     edx, [esp+ps+12]
-    mov     ecx, [esp+ps+20]
+    mov     ecx, [esp+ps+16]
     
     mov     edi,[esp+ps+ 4]
     mov     edi,[edi]
