@@ -2,6 +2,8 @@
 #define _FILE_OFFSET_BITS 64
 #define _LARGEFILE_SOURCE
 
+#define llu(val) ( (unsigned long long int) val )
+
 #include <seom/seom.h>
 
 extern void yv12_to_rgba_c (
@@ -50,7 +52,6 @@ static void glCaptureCreateWindow(int width, int height)
 
 	fbc = glXChooseFBConfig(dpy, DefaultScreen(dpy), attr, &nElements);
 	vi = glXGetVisualFromFBConfig(dpy, fbc[0]);
-	printf("VisualID: 0x%x\n", vi->visualid);
 
 	cx = glXCreateNewContext(dpy, fbc[0], GLX_RGBA_TYPE, 0, GL_FALSE);
 	cmap = XCreateColormap(dpy, RootWindow(dpy, vi->screen), vi->visual, AllocNone);
@@ -109,10 +110,10 @@ static void DrawBar(float val)
 {
 	glDisable(GL_TEXTURE_2D);
 	
-	struct timeval currentTime = { 0 };
+	struct timeval currentTime = { 0, 0 };
 	gettimeofday(&currentTime, 0);
 	
-	struct timeval elapsed = { 0 };
+	struct timeval elapsed = { 0, 0 };
 	timersub(&currentTime, &barTimer, &elapsed);
 	
 	float e = elapsed.tv_sec * 1000000 + elapsed.tv_usec;
@@ -199,10 +200,10 @@ int main(int argc, char *argv[]) {
 	uint64_t tt = (time[1] - time[0]) / 1000000;
 	float fps = (float)cFrameTotal / tt;
 	float mbs = (float)statBuffer.st_size / 1024 / 1024 / tt;
-	printf("%llu frames, %llu seconds, %.1f fps, %.1f MiB/s\n", cFrameTotal, tt, fps, mbs);
+	printf("%llu frames, %llu seconds, %.1f fps, %.1f MiB/s\n", llu(cFrameTotal), llu(tt), fps, mbs);
 
 	uint64_t cTimeTotal = *(uint64_t *) (sourceData + statBuffer.st_size - (width * height * 3 / 2 + sizeof(uint64_t))) - *(uint64_t *) currentPosition;
-	printf("size: %u:%u, cFrameTotal: %llu, time: %llu\n", width, height, cFrameTotal, cTimeTotal / 1000000);
+	printf("size: %u:%u, cFrameTotal: %llu, time: %llu\n", width, height, llu(cFrameTotal), llu(cTimeTotal / 1000000));
 
 	uint64_t rawFrames = (statBuffer.st_size - 2 * sizeof(uint32_t)) / (width * height * 3 / 2 + sizeof(uint64_t));
 	printf("ratio: %.3f\n", (float)rawFrames / cFrameTotal);
@@ -222,7 +223,7 @@ int main(int argc, char *argv[]) {
 	yuvPlanes[1] = yuvPlanes[0] + yuvPlanesSizes[0].x * yuvPlanesSizes[0].y;
 	yuvPlanes[2] = yuvPlanes[1] + yuvPlanesSizes[1].x * yuvPlanesSizes[1].y;
 
-	struct timeval currentTime = { 0 };
+	struct timeval currentTime = { 0, 0 };
 	gettimeofday(&currentTime, 0);
 
 	glCaptureCreateWindow(width, height);
@@ -265,13 +266,13 @@ int main(int argc, char *argv[]) {
 			uint64_t height = yuvPlanesSizes[i].y;
 			
 #define src(x,y) ( yuvPlanes[i][(y)*width+(x)] )
-			for (int x = 1; x < width; ++x) {
+			for (unsigned int x = 1; x < width; ++x) {
 				yuvPlanes[i][x] = yuvPlanes[i][x] + median(src(x-1,0), 0, 0);
 			}
 			
-			for (int y = 1; y < height; ++y) {
+			for (unsigned int y = 1; y < height; ++y) {
 				yuvPlanes[i][y * width] = yuvPlanes[i][y * width] + median(0, 0, src(0,y-1));
-				for (int x = 1; x < width; ++x) {
+				for (unsigned int x = 1; x < width; ++x) {
 					yuvPlanes[i][y * width + x] = yuvPlanes[i][y * width + x] + median(src(x-1,y), src(x-1,y-1), src(x,y-1));
 				}
 			}
@@ -308,7 +309,7 @@ int main(int argc, char *argv[]) {
 		
 		glXSwapBuffers(dpy, win);
 
-		fprintf(stderr, "encoded frames: %llu/%llu \r", fIndex, cFrameTotal);
+		fprintf(stderr, "encoded frames: %llu/%llu \r", llu(fIndex), llu(cFrameTotal));
 
 		int skipFrames = pause ? 0 : 1;
 		while (XPending(dpy)) {
@@ -384,7 +385,7 @@ int main(int argc, char *argv[]) {
 			}
 		}
 		
-		if (skipFrames < 0 && -skipFrames > fIndex) {
+		if (skipFrames < 0 && -skipFrames > (int)fIndex) {
 			fIndex = 0;
 		} else if (skipFrames > 0 && fIndex + skipFrames >= cFrameTotal) {
 			fIndex = cFrameTotal;
@@ -395,7 +396,7 @@ int main(int argc, char *argv[]) {
 		
 		if (1) {
 			currentPosition = sourceData + 2 * sizeof(uint32_t);
-			for (int i = 0; i < fIndex; ++i) {
+			for (unsigned int i = 0; i < fIndex; ++i) {
 				pts = *(uint64_t *) currentPosition;
 				currentPosition += sizeof(uint64_t);
 				for (int i = 0; i < 3; ++i) {
