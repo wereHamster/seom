@@ -43,10 +43,6 @@ static void *seomClientThreadCallback(void *data)
 {
 	seomClient *client = data;
 	
-	printf("seomClient thread started\n");
-	
-	printf("seomClient: size: %llu:%llu => %llu:%llu\n", client->area[2], client->area[3], client->size[0], client->size[1]);
-	
 	uint8_t *yuvPlanes[3];
 	yuvPlanes[0] = malloc(client->size[0] * client->size[1] * 3 / 2);
 	yuvPlanes[1] = yuvPlanes[0] + client->size[0] * client->size[1];
@@ -112,8 +108,6 @@ seomClient *seomClientCreate(Display *dpy, GLXDrawable drawable, const char *ns)
 	client->dpy = dpy;
 	client->drawable = drawable;
 	
-	printf("seomClientStart(): %p - 0x%08x\n", dpy, drawable);
-	
 	uint32_t insets[4];
 	seomConfigInsets(ns, insets);
 	
@@ -125,8 +119,6 @@ seomClient *seomClientCreate(Display *dpy, GLXDrawable drawable, const char *ns)
 		insets[0] = insets[2] = 0;
 	}
 	
-	printf("seomClientStart(): %p, insets: %llu:%llu:%llu:%llu\n", client, insets[0], insets[1], insets[2], insets[3]);
-	
 	client->area[0] = insets[3];
 	client->area[1] = insets[2];
 	client->area[2] = width - insets[1] - insets[3];
@@ -134,7 +126,6 @@ seomClient *seomClientCreate(Display *dpy, GLXDrawable drawable, const char *ns)
 	
 	char scale[64];
 	seomConfigScale(ns, scale);
-	printf("seomClientStart(): %s\n", scale);
 	
 	if (strcmp(scale, "full") == 0) {
 		client->area[2] &= ~(1);
@@ -156,11 +147,10 @@ seomClient *seomClientCreate(Display *dpy, GLXDrawable drawable, const char *ns)
 	char serverAddr[64];
 	int success = sscanf(server, "%s %u", serverAddr, &serverPort);
 	if (success == 0) {
-		printf("server\n");
+		printf("seomClientStart(): malformed server option\n");
+		free(client);
 		return NULL;
 	}
-	
-	printf("server address is: %s:%d\n", serverAddr, serverPort);
 	
 	int fdSocket = socket(AF_INET, SOCK_STREAM, 0);
 	struct sockaddr_in addr;
@@ -170,17 +160,16 @@ seomClient *seomClientCreate(Display *dpy, GLXDrawable drawable, const char *ns)
 
 	if (connect(fdSocket, &addr, sizeof(addr)) == 0) {
 		client->socket = fdSocket;
-		printf("connection to server established\n");
 	} else {
 		close(fdSocket);
-		perror("failed to connect to the server");
+		perror("seomClientStart()");
+		free(client);
 		return NULL;
 	}
 
 	client->buffer = seomBufferCreate(sizeof(seomClientFrame) + client->area[2] * client->area[3] * 4, 16);	
 
 	seomConfigInterval(ns, &client->interval);
-	printf("seomClientStart(): Interval: %f\n", client->interval);
 	
 	client->stat.captureInterval = client->interval;
 	client->stat.engineInterval = client->interval;
@@ -200,8 +189,6 @@ seomClient *seomClientCreate(Display *dpy, GLXDrawable drawable, const char *ns)
 
 void seomClientDestroy(seomClient *client)
 {
-	printf("seomClientDestroy(): %p\n", client);
-	
 	seomClientFrame *frame = seomBufferHead(client->buffer);
 	frame->pts = 0;
 	seomBufferHeadAdvance(client->buffer);
