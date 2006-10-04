@@ -4,17 +4,23 @@ import SCons.Defaults
 import SCons.Tool
 import SCons.Util
 
-machine = os.uname()[4] == 'x86_64' and 'amd64' or 'x86'
-
 env = Environment(
 	CC = 'gcc',
 	CPPPATH = ['#include'],
 	CCFLAGS = ['-std=c99', '-pipe', '-O3'],
-	LINKFLAGS = [],
 	LIBS = ['dl', 'pthread'],
-	AS = 'yasm',
-	ASFLAGS = '-f elf -m '+machine
 )
+
+if os.uname()[4] == 'ppc':
+	machine = 'ppc'
+elif os.uname()[4] == 'x86_64':
+	env['AS'] = 'yasm'
+	env['ASFLAGS'] = '-f elf -m amd64'
+	machine = 'amd64'
+else:
+	env['AS'] = 'yasm'
+	env['ASFLAGS'] = '-f elf -m x86'
+	machine = 'x86'
 
 static_obj, shared_obj = SCons.Tool.createObjBuilders(env)
 
@@ -55,12 +61,12 @@ env.Append(LIBPATH = [ '.' ])
 objPlayer = env.Program('seomPlayer', srcPlayer)
 env.Install('/usr/bin', objPlayer)
 
+objTest = env.Program('test', 'test.c')
+
 for file in os.listdir('include/seom'):
 	path = os.path.join('include/seom', file)
 	if os.path.isfile(path):
 		env.Install('/usr/include/seom', path)
-
-objTest = env.Program('test', 'test.c')
 
 env.Default([ objLibrary, objServer, objPlayer ])
 env.Alias('install', '/usr')
