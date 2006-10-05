@@ -1,5 +1,6 @@
 
 import os
+import re
 import SCons.Defaults
 import SCons.Tool
 import SCons.Util
@@ -11,61 +12,65 @@ env = Environment(
 	LIBS = ['dl', 'pthread'],
 )
 
-if os.uname()[4] == 'ppc':
-	machine = 'ppc'
-elif os.uname()[4] == 'x86_64':
-	env['AS'] = 'yasm'
-	env['ASFLAGS'] = '-f elf -m amd64'
-	machine = 'amd64'
-else:
+src = {
+	'lib' : [
+		'src/lib/buffer.c',
+		'src/lib/client.c',
+		'src/lib/codec.c',
+		'src/lib/config.c',
+	],
+	'player' : [
+		'src/player/colorspace.c',
+		'src/player/main.c',
+	],
+	'server' : [
+		'src/server/main.c',
+	],
+}
+
+machine = os.uname()[4]
+if re.match('i?86', machine):
 	env['AS'] = 'yasm'
 	env['ASFLAGS'] = '-f elf -m x86'
-	machine = 'x86'
+	
+	src['lib'].append([
+		'src/asm/x86/resample.asm',
+		'src/asm/x86/convert.asm',
+		'src/asm/x86/huffman.asm',
+	])
+elif machine == 'x86_64':
+	env['AS'] = 'yasm'
+	env['ASFLAGS'] = '-f elf -m amd64'
+	
+	src['lib'].append([
+		'src/asm/amd64/resample.asm',
+		'src/asm/amd64/convert.asm',
+		'src/asm/amd64/huffman.asm',
+	])
+else:
+	src['lib'].append([
+		'src/asm/c/resample.c',
+		'src/asm/c/convert.c',
+		'src/asm/c/huffman.c',
+	])
 
 static_obj, shared_obj = SCons.Tool.createObjBuilders(env)
 
 shared_obj.add_action('.asm', SCons.Defaults.ASAction)
 shared_obj.add_emitter('.asm', SCons.Defaults.SharedObjectEmitter)
 
-srcAssembler = [
-	'src/asm/'+machine+'/resample.asm',
-	'src/asm/'+machine+'/convert.asm',
-	'src/asm/'+machine+'/huffman.asm',
-]
+objLibrary = env.SharedLibrary('seom', src['lib'])
+env.Install('/usr/lib', objLibrary)
 
-srcLibrary = [
-	'src/lib/buffer.c',
-	'src/lib/config.c',
-	'src/lib/codec.c',
-	'src/lib/client.c',
-]
-
-srcServer = [
-	'src/server/main.c',
-]
-
-srcPlayer = [
-	'src/player/main.c',
-	'src/player/colorspace.c',
-]
-
-objLibraryShared = env.SharedLibrary('seom', srcLibrary + srcAssembler)
-env.Install('/usr/lib', objLibraryShared)
-env.Alias('shared', objLibraryShared)
-
-objLibraryStatic = env.StaticLibrary('seom', srcLibrary + srcAssembler)
-env.Install('/usr/lib', objLibraryStatic)
-env.Alias('static', objLibraryStatic)
-
-objServer = env.Program('seomServer', srcServer)
+objServer = env.Program('seomServer', src['server'])
 env.Install('/usr/bin', objServer)
 
 env = env.Copy()
-env.Append(LIBS = ['GL', 'X11', objLibraryStatic])
-objPlayer = env.Program('seomPlayer', srcPlayer)
+env.Append(LIBS = ['GL', 'X11', 'seom'])
+env.Append(LIBPATH = ['.'])
+objPlayer = env.Program('seomPlayer', src['player'])
 env.Install('/usr/bin', objPlayer)
 
-objTest = env.Program('test', 'test.c')
 objExample = env.Program('example', 'example.c')
 
 for file in os.listdir('include/seom'):
@@ -73,5 +78,5 @@ for file in os.listdir('include/seom'):
 	if os.path.isfile(path):
 		env.Install('/usr/include/seom', path)
 
-env.Default([ objLibraryShared, objLibraryStatic, objServer, objPlayer, objExample ])
+env.Default([ objLibrary, objServer, objPlayer, objExample ])
 env.Alias('install', '/usr')
