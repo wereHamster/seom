@@ -73,7 +73,7 @@ env.Append(LIBPATH = ['.'])
 objPlayer = env.Program('seomPlayer', src['player'])
 env.Install('/usr/bin', objPlayer)
 
-objFilter = env.Program('seomFilter', ['src/main.c'] + src['common'])
+objFilter = env.Program('seomFilter', ['src/filter/main.c'] + src['common'])
 env.Install('/usr/bin', objFilter)
 
 objExample = env.Program('example', 'example.c')
