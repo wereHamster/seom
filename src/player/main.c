@@ -261,7 +261,7 @@ int main(int argc, char *argv[]) {
 		for (int i = 0; i < 3; ++i) {
 			uint64_t cSize = *(uint64_t *) currentPosition;
 			currentPosition += sizeof(uint64_t);
-			seomCodecDecodeReference(yuvPlanes[i], (uint32_t *)currentPosition, yuvPlanes[i] + yuvPlanesSizes[i].x * yuvPlanesSizes[i].y, &seomCodecTable);
+			seomCodecDecode(yuvPlanes[i], (uint32_t *)currentPosition, yuvPlanes[i] + yuvPlanesSizes[i].x * yuvPlanesSizes[i].y, &seomCodecTable);
 			
 			uint64_t width = yuvPlanesSizes[i].x;
 			uint64_t height = yuvPlanesSizes[i].y;
