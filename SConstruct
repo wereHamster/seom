@@ -31,7 +31,7 @@ src = {
 }
 
 machine = os.uname()[4]
-if re.match('i?86', machine):
+if re.match('i.86', machine):
 	env['AS'] = 'yasm'
 	env['ASFLAGS'] = '-f elf -m x86'
 	
