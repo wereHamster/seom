@@ -261,20 +261,21 @@ int main(int argc, char *argv[]) {
 		for (int i = 0; i < 3; ++i) {
 			uint64_t cSize = *(uint64_t *) currentPosition;
 			currentPosition += sizeof(uint64_t);
-			seomCodecDecode(yuvPlanes[i], (uint32_t *)currentPosition, yuvPlanes[i] + yuvPlanesSizes[i].x * yuvPlanesSizes[i].y, &seomCodecTable);
+			seomCodecDecodeReference(yuvPlanes[i], (uint32_t *)currentPosition, yuvPlanes[i] + yuvPlanesSizes[i].x * yuvPlanesSizes[i].y, 
+&seomCodecTable);
 			
 			uint64_t width = yuvPlanesSizes[i].x;
 			uint64_t height = yuvPlanesSizes[i].y;
 			
 #define src(x,y) ( yuvPlanes[i][(y)*width+(x)] )
 			for (unsigned int x = 1; x < width; ++x) {
-				yuvPlanes[i][x] = yuvPlanes[i][x] + median(src(x-1,0), 0, 0);
+				yuvPlanes[i][x] += median(src(x-1,0), 0, 0);
 			}
 			
 			for (unsigned int y = 1; y < height; ++y) {
-				yuvPlanes[i][y * width] = yuvPlanes[i][y * width] + median(0, 0, src(0,y-1));
+				yuvPlanes[i][y * width] += median(0, 0, src(0,y-1));
 				for (unsigned int x = 1; x < width; ++x) {
-					yuvPlanes[i][y * width + x] = yuvPlanes[i][y * width + x] + median(src(x-1,y), src(x-1,y-1), src(x,y-1));
+					yuvPlanes[i][y * width + x] += median(src(x-1,y), src(x-1,y-1), src(x,y-1));
 				}
 			}
 #undef src
