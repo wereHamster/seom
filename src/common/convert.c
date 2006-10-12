@@ -50,10 +50,6 @@ void seomConvert(uint8_t *out[3], uint32_t *in, uint32_t w, uint32_t h)
 			
 			out[1][y/2*w/2+x/2] = (uint8_t) ((-m[1][ri] * r[ri] - m[1][gi] * r[gi] + m[1][bi] * r[bi]) >> (scale + 2)) + 128;
 			out[2][y/2*w/2+x/2] = (uint8_t) ((m[2][ri] * r[ri] - m[2][gi] * r[gi] - m[2][bi] * r[bi]) >> (scale + 2)) + 128;
-			
-			if (x == 200 && y == 100) {
-				printf("%d:%d:%d * %d:%d:%d => %02x:%02x\n", r[ri], r[gi], r[bi], m[1][ri], m[1][gi], m[1][bi], out[1][y/2*w/2+x/2], out[2][y/2*w/2+x/2]);
-			}
 		}
 	}
 }
