@@ -6,8 +6,8 @@ static uint32_t streamGet(void *priv, void *data, uint32_t size)
 	seomClient *client = priv;
 	uint32_t *psize = data;
 	
-	psize[0] = htonl(client->size[0]);
-	psize[1] = htonl(client->size[1]);
+	psize[0] = htonl(client->dst.size[0]);
+	psize[1] = htonl(client->dst.size[1]);
 	
 	return size;
 }
@@ -29,7 +29,7 @@ static seomStreamOps streamOps = {
 static void *seomClientThreadCallback(void *data)
 {
 	seomClient *client = data;
-	seomFrame *dst = seomFrameCreate('c', client->size[0], client->size[1]);
+	seomFrame *dst = seomFrameCreate('c', client->dst.size[0], client->dst.size[1]);
 	
 	for (;;) {
 		uint64_t start = seomTime();
@@ -39,7 +39,7 @@ static void *seomClientThreadCallback(void *data)
 			break;
 		}
 		
-		client->copy(dst, src, client->size[0], client->size[1]);		
+		client->copy(dst, src, client->src.size[0], client->src.size[1]);		
 		seomStreamPut(client->stream, dst);
 		
 		seomBufferTailAdvance(client->buffer);
@@ -70,86 +70,56 @@ static void copyFrameHalf(seomFrame *dst, seomFrame *src, uint32_t w, uint32_t h
 	seomFrameConvert(dst, src, w / 2, h / 2);
 }
 
-seomClient *seomClientCreate(Display *dpy, GLXDrawable drawable, const char *ns)
+seomClient *seomClientCreate(seomConfig *config, uint32_t width, uint32_t height)
 {
-	Window root;
-	unsigned int width, height, uunused;
-	int sunused;
- 
-	XGetGeometry(dpy, drawable, &root, &sunused, &sunused, &width, &height, &uunused, &uunused);
-
 	seomClient *client = malloc(sizeof(seomClient));
 	if (client == NULL) {
 		printf("seomClientStart(): out of memory\n");
 		return NULL;
 	}
 	
-	client->dpy = dpy;
-	client->drawable = drawable;
-	
-	uint32_t insets[4];
-	seomConfigInsets(ns, insets);
-	
-	if (insets[1] + insets[3] > width) {
+	if (config->insets[1] + config->insets[3] > width) {
 		printf("seomClientStart(): right+left insets > width\n");
-		insets[1] = insets[3] = 0;
-	} else if (insets[0] + insets[2] > height) {
+		free(client);
+		return NULL;
+	} else if (config->insets[0] + config->insets[2] > height) {
 		printf("seomClientStart(): top+bottom insets > height\n");
-		insets[0] = insets[2] = 0;
-	}
-	
-	client->area[0] = insets[3];
-	client->area[1] = insets[2];
-	client->area[2] = width - insets[1] - insets[3];
-	client->area[3] = height - insets[0] - insets[2];
-	
-	char scale[64];
-	seomConfigScale(ns, scale);
-	
-	if (strcmp(scale, "full") == 0) {
-		client->area[2] &= ~(1);
-		client->area[3] &= ~(1);
-		client->size[0] = client->area[2];
-		client->size[1] = client->area[3];
-		client->copy = copyFrameFull;
-	} else {
-		client->area[2] &= ~(3);
-		client->area[3] &= ~(3);
-		client->size[0] = client->area[2] >> 1;
-		client->size[1] = client->area[3] >> 1;
-		client->copy = copyFrameHalf;		
-	}
-	
-	char server[256];
-	seomConfigServer(ns, server);
-	unsigned int serverPort;
-	char serverAddr[64];
-	int success = sscanf(server, "%s %u", serverAddr, &serverPort);
-	if (success == 0) {
-		printf("seomClientStart(): malformed server option\n");
 		free(client);
 		return NULL;
 	}
 	
-	int fdSocket = socket(AF_INET, SOCK_STREAM, 0);
-	struct sockaddr_in addr;
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(serverPort);
-	addr.sin_addr.s_addr = inet_addr(serverAddr);
-
-	if (connect(fdSocket, &addr, sizeof(addr)) == 0) {
-		client->socket = fdSocket;
+	client->src.size[0] = width - config->insets[1] - config->insets[3];
+	client->src.size[1] = height - config->insets[0] - config->insets[2];
+	
+	if (config->scale) {
+		client->copy = copyFrameHalf;
+		
+		client->src.size[0] &= (~3);
+		client->dst.size[0] = client->src.size[0] >> 1;
+		
+		client->src.size[1] &= (~3);
+		client->dst.size[1] = client->src.size[1] >> 1;
 	} else {
-		close(fdSocket);
+		client->copy = copyFrameFull;
+		
+		client->src.size[0] &= (~1);
+		client->dst.size[0] = client->src.size[0];
+		
+		client->src.size[1] &= (~1);
+		client->dst.size[1] = client->src.size[1];
+	}
+	
+	client->socket = socket(AF_INET, SOCK_STREAM, 0);
+	if (connect(client->socket, &config->addr, sizeof(config->addr))) {
+		close(client->socket);
 		perror("seomClientStart()");
 		free(client);
 		return NULL;
 	}
-
-	client->buffer = seomBufferCreate(sizeof(seomFrame) + client->area[2] * client->area[3] * 4, 16);	
-
-	seomConfigInterval(ns, &client->interval);
 	
+	client->buffer = seomBufferCreate(sizeof(seomFrame) + client->src.size[0] * client->src.size[1] * 4, 16);	
+
+	client->interval = config->interval;	
 	client->stat.captureInterval = client->interval;
 	client->stat.engineInterval = client->interval;
 	client->stat.captureDelay = 0.0;
@@ -160,6 +130,8 @@ seomClient *seomClientCreate(Display *dpy, GLXDrawable drawable, const char *ns)
 	pthread_create(&client->thread, NULL, seomClientThreadCallback, client);
 	
 	client->stream = seomStreamCreate(&streamOps, client);
+	
+	client->capture = dlsym(RTLD_DEFAULT, "glReadPixels");
 	
 	return client;
 }
@@ -184,7 +156,7 @@ void seomClientDestroy(seomClient *client)
 }
 
 
-void seomClientCapture(seomClient *client)
+void seomClientCapture(seomClient *client, uint32_t xoffset, uint32_t yoffset)
 {
 	uint64_t bufferStatus = seomBufferStatus(client->buffer);
 	
@@ -209,14 +181,12 @@ void seomClientCapture(seomClient *client)
 
 	double delayMargin = client->stat.captureInterval / 10.0;
 	if (tDelay < delayMargin) {
-		if (bufferStatus) {
-			uint32_t *area = client->area;
-			
+		if (bufferStatus) {			
 			seomFrame *frame = seomBufferHead(client->buffer);
 			
 			frame->type = 'r';
 			frame->pts = timeCurrent;
-			glReadPixels(area[0], area[1], area[2], area[3], GL_BGRA, GL_UNSIGNED_BYTE, &frame->data[0]);
+			client->capture(xoffset, yoffset, client->src.size[0], client->src.size[1], GL_BGRA, GL_UNSIGNED_BYTE, &frame->data[0]);
 			
 			seomBufferHeadAdvance(client->buffer);
 

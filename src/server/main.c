@@ -9,7 +9,6 @@ static const int version[3] = { 0, 1, 0 };
 
 static char seomOutput[1024];
 static struct option seomServerOptions[] = {
-	{ "port",    1, 0, 'p' },
 	{ "outdir",  1, 0, 'o' },	
 	{ "version", 0, 0, 'v' },
 	{ "help",    0, 0, 'h' },
@@ -29,7 +28,6 @@ static void help(void)
 {
 	printf(
 		"seomServer version %d.%d.%d\n"
-		"\t-p, --port:    port number\n"
 		"\t-o, --outdir:  output directory prefix\n"
 		"\t-v, --version: print version info\n"
 		"\t-h, --help:    print help text\n"
@@ -51,20 +49,16 @@ static char *date(void)
 int main(int argc, char *argv[])
 {
 	int opindex = 0;
-	int port = 9000;
 	
 	snprintf(seomOutput, sizeof(seomOutput), "%s/seom", getenv("HOME"));
 
 	for (;;)  {
-		int c = getopt_long(argc, argv, "p:o:vhd", seomServerOptions, &opindex);
+		int c = getopt_long(argc, argv, "o:vhd", seomServerOptions, &opindex);
 		
 		if (c == -1) {
 			break;
 		} else {
 			switch(c) {
-			case 'p':
-				port = atoi(optarg);
-				break;
 			case 'o':
 				snprintf(seomOutput, sizeof(seomOutput), "%s", optarg);
 				break;
@@ -83,11 +77,11 @@ int main(int argc, char *argv[])
 		}
  	}
  	
-	printf("[%s]: running on port %d using output directory %s\n", date(), port, seomOutput);
+	printf("[%s]: using output directory %s\n", date(), seomOutput);
 
 	signal(SIGINT, sighandler);
 	
-	seomServer *server = seomServerCreate(port, seomOutput);
+	seomServer *server = seomServerCreate(seomOutput);
 	for (;;) {
 		seomServerDispatch(server);
 	}

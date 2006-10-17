@@ -1,20 +1,15 @@
 
 import os
-import re
-import SCons.Defaults
-import SCons.Tool
-import SCons.Util
 
 env = Environment(
 	CC = 'gcc',
 	CPPPATH = ['#include'],
-	CCFLAGS = ['-std=c99', '-pipe', '-g', '-W', '-Wall'],
+	CCFLAGS = ['-std=c99', '-pipe', '-O3', '-W', '-Wall', os.getenv('CFLAGS')],
+	LINKFLAGS = [os.getenv('LDFLAGS')],
 	LIBS = ['dl', 'pthread'],
 )
 
 src = {
-	'common' : [
-	],
 	'lib' : [
 		'src/buffer.c',
 		'src/frame.c',
@@ -35,34 +30,23 @@ src = {
 	],
 }
 
-machine = os.uname()[4]
-if re.match('i.86', machine):
-	env['AS'] = 'yasm'
-	env['ASFLAGS'] = '-f elf -m x86'
-elif machine == 'x86_64':
-	env['AS'] = 'yasm'
-	env['ASFLAGS'] = '-f elf -m amd64'
-
-
-static_obj, shared_obj = SCons.Tool.createObjBuilders(env)
-
-shared_obj.add_action('.asm', SCons.Defaults.ASAction)
-shared_obj.add_emitter('.asm', SCons.Defaults.SharedObjectEmitter)
-
-objLibrary = env.SharedLibrary('seom', src['lib'] + src['common'])
+objLibrary = env.SharedLibrary('seom', src['lib'])
 env.Install('/usr/lib', objLibrary)
 
-objServer = env.Program('seomServer', src['server'] + ['src/server.c'])
+env = env.Copy()
+env.Append(LIBS = ['seom'], LIBPATH = ['.'])
+
+objServer = env.Program('seomServer', src['server'])
 env.Install('/usr/bin', objServer)
 
+objFilter = env.Program('seomFilter', ['src/filter/main.c'])
+env.Install('/usr/bin', objFilter)
+
 env = env.Copy()
-env.Append(LIBS = ['GL', 'X11', 'seom'])
-env.Append(LIBPATH = ['.'])
+env.Append(LIBS = ['GL', 'X11'])
+
 objPlayer = env.Program('seomPlayer', src['player'])
 env.Install('/usr/bin', objPlayer)
-
-objFilter = env.Program('seomFilter', ['src/filter/main.c'] + src['common'])
-env.Install('/usr/bin', objFilter)
 
 objExample = env.Program('example', 'example.c')
 

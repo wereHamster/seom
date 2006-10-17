@@ -21,14 +21,14 @@ static int seomConfigOption(const char *ns, const char *option, char *buffer, in
 	return 0;
 }
 
-void seomConfigServer(const char *ns, char server[256])
+static void seomConfigServer(const char *ns, char server[256])
 {
 	if (seomConfigOption(ns, "server", server, 256) == 0) {
-		strncpy(server, "127.0.0.1 9000", 256);
+		strncpy(server, "127.0.0.1", 256);
 	}
 }
 
-void seomConfigInterval(const char *ns, double *v)
+static void seomConfigInterval(const char *ns, double *v)
 {
 	char interval[64];
 	
@@ -45,14 +45,18 @@ void seomConfigInterval(const char *ns, double *v)
 	}
 }
 
-void seomConfigScale(const char *ns, char scale[64])
+static void seomConfigScale(const char *ns, char *v)
 {
+	char scale[64];
+	
 	if (seomConfigOption(ns, "scale", scale, 64) == 0) {
-		strncpy(scale, "half", 64);
+		*v = 0;
+	} else {
+		*v = atoi(scale);
 	}
 }
 
-void seomConfigInsets(const char *ns, uint32_t v[4])
+static void seomConfigInsets(const char *ns, uint32_t v[4])
 {
 	char insets[64];
 	
@@ -72,7 +76,25 @@ void seomConfigInsets(const char *ns, uint32_t v[4])
 	}
 }
 
-seomConfig *seomConfigCreate()
+seomConfig *seomConfigCreate(const char *ns)
 {
-	return NULL;
+	seomConfig *config = malloc(sizeof(seomConfig));
+	
+	seomConfigInsets(ns, config->insets);	
+	seomConfigInterval(ns, &config->interval);
+	seomConfigScale(ns, &config->scale);
+	
+	char server[256];
+	seomConfigServer(ns, server);
+	
+	config->addr.sin_family = AF_INET;
+	config->addr.sin_port = htons(42803);
+	config->addr.sin_addr.s_addr = inet_addr(server);
+	
+	return config;
+}
+
+void seomConfigDestroy(seomConfig *config)
+{
+	free(config);
 }

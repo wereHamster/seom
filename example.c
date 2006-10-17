@@ -54,9 +54,11 @@ int main(int argc, char *argv[])
 	}
 	
 	Display *dpy = XOpenDisplay(NULL);
-	Window win = glWindow(dpy, 400, 400); 
+	Window win = glWindow(dpy, 400, 400);
 	
-	seomClient *client = seomClientCreate(dpy, win, argv[1]);
+	seomConfig *config = seomConfigCreate(argv[1]); 
+	
+	seomClient *client = seomClientCreate(config, 400, 400);
 	if (client == NULL) {
 		printf("couldn't create seomClient\n");
 		return 0; 
@@ -73,7 +75,7 @@ int main(int argc, char *argv[])
 		glClearColor(color[0], color[1], color[2], 1.0);
 		glClear(GL_COLOR_BUFFER_BIT);
 		
-		seomClientCapture(client);
+		seomClientCapture(client, 0, 0);
 		glXSwapBuffers(dpy, win);
 	}
 	

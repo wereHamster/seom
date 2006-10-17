@@ -4,24 +4,22 @@
 
 #include <seom/seom.h>
 
-typedef struct _seomClient seomClient;
-
-seomClient *seomClientCreate(Display *dpy, GLXDrawable drawable, const char *ns);
-void seomClientCapture(seomClient *client);
-void seomClientDestroy(seomClient *client);
-
-struct _seomClient {
-	Display *dpy;
-	GLXDrawable drawable;
-
+typedef struct seomClient {
 	pthread_mutex_t mutex;
 	pthread_t thread;
 	
+	void (*capture)(GLint x, GLint y, GLsizei w, GLsizei h, GLenum f, GLenum t, GLvoid *p);
+	
+	struct {
+		uint32_t size[2];
+	} src;
+	
+	struct {
+		uint32_t size[2];
+	} dst;
+	
 	seomBuffer *buffer;
 	void (*copy)(seomFrame *dst, seomFrame *src, uint32_t w, uint32_t h);
-	
-	uint32_t area[4];
-	uint32_t size[2];
 	
 	double interval;
 	
@@ -34,10 +32,10 @@ struct _seomClient {
 	
 	int socket;
 	seomStream *stream;
-};
+} seomClient;
 
-void seomResample(uint32_t *buf, uint32_t w, uint32_t h);
-void seomConvert(uint8_t *out[3], uint32_t *in, uint32_t w, uint32_t h);
-
+seomClient *seomClientCreate(seomConfig *config, uint32_t width, uint32_t height);
+void seomClientCapture(seomClient *client, uint32_t xoffset, uint32_t yoffset);
+void seomClientDestroy(seomClient *client);
 
 #endif /* __SEOM_CLIENT_H__ */

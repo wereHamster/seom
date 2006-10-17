@@ -4,6 +4,8 @@
 
 #include <seom/seom.h>
 
+#define seomServerPort 42803
+
 typedef struct seomServerThread {
 	pthread_t handle;
 	int socket;
@@ -18,7 +20,7 @@ typedef struct seomServer {
 	seomServerThread thread[16];
 } seomServer;
 
-seomServer *seomServerCreate(short port, char *path);
+seomServer *seomServerCreate(char *path);
 void seomServerDispatch(seomServer *server);
 void seomServerDestroy(seomServer *server);
 

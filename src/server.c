@@ -51,7 +51,7 @@ out:
 	return NULL;
 }
 
-seomServer *seomServerCreate(short port, char *path)
+seomServer *seomServerCreate(char *path)
 {
 	seomServer *server = malloc(sizeof(seomServer));
 	
@@ -60,7 +60,7 @@ seomServer *seomServerCreate(short port, char *path)
 	
 	struct sockaddr_in addr;
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons(port);
+	addr.sin_port = htons(seomServerPort);
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	
 	bind(server->socket, &addr, sizeof(addr));
