@@ -6,11 +6,15 @@ seomStream *seomStreamCreate(char type, char *spec, uint32_t size[2])
 	seomStream *stream = malloc(sizeof(seomStream));
 	
 	if (strncmp(spec, "file://", 7) == 0) {
-		stream->fd = open(&spec[7], O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IRGRP | S_IROTH);
-		printf("file:// output: %s\n", &spec[7]);
+		fprintf(stderr, "file:// output: %s\n", &spec[7]);
+		if (type == 'o') {
+			stream->fd = open(&spec[7], O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IRGRP | S_IROTH);
+		} else {
+			stream->fd = open(&spec[7], O_RDONLY);
+		}
 	} else if (strncmp(spec, "unix://", 7) == 0) {
+		fprintf(stderr, "unix:// output: %s\n", &spec[7]);
 		stream->fd = open(&spec[7], O_RDWR);
-		printf("unix:// output: %s\n", &spec[7]);
 	} else if (strncmp(spec, "ipv4://", 7) == 0) {
 		struct sockaddr_in addr = {
 			.sin_family = AF_INET,
@@ -21,11 +25,11 @@ seomStream *seomStreamCreate(char type, char *spec, uint32_t size[2])
 		stream->fd = socket(AF_INET, SOCK_STREAM, 0);
 		connect(stream->fd, &addr, sizeof(addr));
 		
-		printf("ipv4:// output: %s\n", &spec[7]);
+		fprintf(stderr, "ipv4:// output: %s\n", &spec[7]);
 	} else if (strncmp(spec, "ipv6://", 7) == 0) {
-		printf("IPv6 unsupported !\n");
+		fprintf(stderr, "IPv6 unsupported !\n");
 	} else {
-		printf("unknown spec: %s\n", spec);
+		fprintf(stderr, "unknown spec: %s\n", spec);
 		free(stream);
 		return NULL;
 	}
