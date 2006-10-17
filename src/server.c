@@ -7,7 +7,7 @@ static int output(char *path)
 	time_t tim = time(NULL);
 	struct tm *tm = localtime(&tim);
 	snprintf(buf, 4096, "%s/%d-%02d-%02d--%02d:%02d:%02d.seom", path, tm->tm_year+1900, tm->tm_mon+1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
-	return open(path, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IRGRP | S_IROTH);
+	return open(buf, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IRGRP | S_IROTH);
 }
 
 static void *loop(void *arg)
