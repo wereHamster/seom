@@ -41,7 +41,10 @@ seomFrame *seomStreamGet(seomStream *stream)
 	seomFrame *frame = seomFrameCreate('c', stream->size[0], stream->size[1]);
 	
 	uint64_t pts;
-	stream->ops->get(stream->priv, &pts, sizeof(pts));
+	if (stream->ops->get(stream->priv, &pts, sizeof(pts)) == 0) {
+		seomFrameDestroy(frame);
+		return NULL;
+	}
 	
 	uint32_t len;
 	stream->ops->get(stream->priv, &len, sizeof(len));

@@ -15,11 +15,22 @@ static void help(void)
 	);
 }
 
-/* median(L, LT ,T) => L, L + T - LT, T */
-static uint8_t median(uint8_t L, uint8_t LT, uint8_t T)
+
+static uint32_t streamGet(void *priv, void *data, uint32_t size)
 {
-	return ( L + L+T-LT + T) / 3;
+	return read(0, data, size);
 }
+
+static uint32_t streamPut(void *priv, void *data, uint32_t size)
+{
+	return size;
+}
+
+static seomStreamOps streamOps = {
+	.get = streamGet,
+	.pos = NULL,
+	.put = streamPut
+};
 
 int main(int argc, char *argv[])
 {
@@ -48,59 +59,37 @@ int main(int argc, char *argv[])
 	close(0);
 	open(argv[1], O_RDONLY);
 	
-	struct { uint32_t x; uint32_t y; } size[3];
-	read(0, &size[0].x, sizeof(size[0].x));
-	read(0, &size[0].y, sizeof(size[0].y));
-	
-	size[0].x = ntohl(size[0].x);
-	size[0].y = ntohl(size[0].y);
-	
-	size[1].x = size[2].x = size[0].x / 2;
-	size[1].y = size[2].y = size[0].y / 2;
-	
-	uint64_t len = size[0].x * size[0].y;
-	uint32_t *tmp = malloc(len);
-	uint8_t *data = malloc(size[0].x * size[0].y * 3 / 2);
+	seomStream *stream = seomStreamCreate(&streamOps, NULL);
 	
 	char header[4096];
-	int n = snprintf(header, 4096, "YUV4MPEG2 W%d H%d F%d Ip\n", size[0].x, size[0].y, fps);
+	int n = snprintf(header, 4096, "YUV4MPEG2 W%d H%d F%d Ip\n", stream->size[0], stream->size[1], fps);
 	write(1, header, strlen(header));
 	
 	for (;;) {
-		uint64_t pts;
-		if (read(0, &pts, sizeof(pts)) == 0)
+		seomFrame *frame = seomStreamGet(stream);
+		if (frame == NULL) {
 			break;
+		}
 		
 		n = snprintf(header, 4096, "FRAME\n");
 		write(1, header, strlen(header));
 		
-		for (int i = 0; i < 3; ++i) {
-			uint64_t length;
-			read(0, &length, sizeof(length));
-			if (length > len) {
-				len = length;
-				tmp = realloc(tmp, len);
-			}
-			read(0, tmp, length);
-			seomCodecDecode(data, tmp, data + size[i].x * size[i].y, &seomCodecTable);
-			
-#define src(xo,yo) ( data[(yo) * size[i].x + (xo)] )
-			for (uint32_t x = 1; x < size[i].x; ++x) {
-				data[x] += median(src(x-1,0), 0, 0);
-			}
-			
-			for (uint32_t y = 1; y < size[i].y; ++y) {
-				data[y * size[i].x] += median(0, 0, src(0,y-1));
-				for (uint32_t x = 1; x < size[i].x; ++x) {
-					data[y * size[i].x + x] += median(src(x-1,y), src(x-1,y-1), src(x,y-1));
-				}
-			}
-			
-			for (uint32_t y = size[i].y - 1; y < size[i].y; --y) { 
-				write(1, data + y * size[i].x, size[i].x);
-			}
-#undef src
+		uint8_t *data = (uint8_t *) &frame->data[0];
+		
+		for (uint32_t y = stream->size[1] - 1; y < stream->size[1]; --y) { 
+			write(1, data + y * stream->size[0], stream->size[0]);
 		}
+		
+		data += stream->size[0] * stream->size[1];
+		
+		for (int i = 0; i < 2; ++i) {
+			for (uint32_t y = (stream->size[1] / 2) - 1; y < (stream->size[1] / 2); --y) { 
+				write(1, data + y * (stream->size[0] / 2), (stream->size[0] / 2));
+			}
+			data += stream->size[0] * stream->size[1] / 4;
+		}
+		
+		seomFrameDestroy(frame);
 	}
 	
 	return 0;
