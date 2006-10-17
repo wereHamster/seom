@@ -177,10 +177,8 @@ int main(int argc, char *argv[]) {
 	for (;;) {
 		time[1] = *(uint64_t *) mem;
 		mem += sizeof(uint64_t);
-		for (int i = 0; i < 3; ++i) {
-			uint64_t cSize = *(uint64_t *) mem;
-			mem += sizeof(uint64_t) + cSize;
-		}
+		uint32_t cSize = *(uint32_t *) mem;
+		mem += sizeof(uint32_t) + cSize;
 		
 		if (mem >= sourceData + statBuffer.st_size) {
 			break;
@@ -258,29 +256,12 @@ int main(int argc, char *argv[]) {
 		pts = *(uint64_t *) currentPosition;
 		currentPosition += sizeof(uint64_t);
 		
-		for (int i = 0; i < 3; ++i) {
-			uint64_t cSize = *(uint64_t *) currentPosition;
-			currentPosition += sizeof(uint64_t);
-			seomCodecDecodeReference(yuvPlanes[i], (uint32_t *)currentPosition, yuvPlanes[i] + yuvPlanesSizes[i].x * yuvPlanesSizes[i].y, 
-&seomCodecTable);
-			
-			uint64_t width = yuvPlanesSizes[i].x;
-			uint64_t height = yuvPlanesSizes[i].y;
-			
-#define src(x,y) ( yuvPlanes[i][(y)*width+(x)] )
-			for (unsigned int x = 1; x < width; ++x) {
-				yuvPlanes[i][x] += median(src(x-1,0), 0, 0);
-			}
-			
-			for (unsigned int y = 1; y < height; ++y) {
-				yuvPlanes[i][y * width] += median(0, 0, src(0,y-1));
-				for (unsigned int x = 1; x < width; ++x) {
-					yuvPlanes[i][y * width + x] += median(src(x-1,y), src(x-1,y-1), src(x,y-1));
-				}
-			}
-#undef src
-			currentPosition += cSize;
-		}
+		uint32_t cSize = *(uint32_t *) currentPosition;
+		currentPosition += sizeof(uint32_t);
+		
+		seomCodecDecode(yuvPlanes[0], currentPosition, yuvPlanesSizes[0].x, yuvPlanesSizes[0].y);
+		
+		currentPosition += cSize;
 
 		yv12_to_rgba_c(rgbFrame, width * 4, yuvPlanes[0], yuvPlanes[1], yuvPlanes[2], width, width / 2, width, height, 0);
 		glTexImage2D(GL_TEXTURE_2D, 0, 4, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, rgbFrame);
@@ -401,10 +382,8 @@ int main(int argc, char *argv[]) {
 			for (unsigned int i = 0; i < fIndex; ++i) {
 				pts = *(uint64_t *) currentPosition;
 				currentPosition += sizeof(uint64_t);
-				for (int i = 0; i < 3; ++i) {
-					uint64_t cSize = *(uint64_t *) currentPosition;
-					currentPosition += sizeof(uint64_t) + cSize;
-				}
+				uint32_t cSize = *(uint32_t *) currentPosition;
+				currentPosition += sizeof(uint32_t) + cSize;
 
 				if (currentPosition >= sourceData + statBuffer.st_size) {
 					break;

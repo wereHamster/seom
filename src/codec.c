@@ -108,76 +108,45 @@ static void seomCodecInit()
 	}
 }
 
-uint32_t *seomCodecEncodeReference(uint32_t * dst, uint8_t * src, uint8_t * end, struct seomCodecTable *tbl)
+void __seomCodecPredict(uint8_t *plane, uint32_t width, uint32_t height);
+uint32_t *__seomCodecEncrypt(uint32_t *dst, uint8_t *src, uint32_t length);
+uint32_t *__seomCodecDecrypt(uint8_t *dst, uint32_t *src, uint32_t length);
+void __seomCodecRestore(uint8_t *plane, uint32_t width, uint32_t height);
+
+uint32_t *seomCodecEncode(uint32_t *dst, uint8_t *src, uint32_t width, uint32_t height)
 {
-	int bits = 32;
-	int epos = 0;
-	uint64_t qword = 0;
-	while (src < end) {
-		uint8_t sym = *src++;
-		uint32_t code = tbl->codes[sym];
-		int len = code & 0xff;
-		qword &= 0xffffffff00000000;
-		qword |= code;
-		if (bits - len <= 0) {
-			qword <<= bits;
-			dst[epos++] = htonl(qword >> 32);
-			len -= bits;
-			bits = 32;
-		}
-		//printf("%d/%d\n", bits, len);
-		qword <<= len;
-		bits -= len;
-		//_p32(byte);
-	}
-
-	if (bits > 0) {
-		qword <<= bits;
-		dst[epos++] = htonl(qword >> 32);
-	}
-	//printf("%012d - %012d\n", epos*4, size);
-	return dst + epos;
-}
-
-uint8_t *seomCodecDecodeReference(uint8_t *dst, uint32_t *src, uint8_t *end, struct seomCodecTable *tbl)
-{
-	int bpos = 0;
-	int opos = 0;
-	for (;;) {
-		int vpos = bpos % 32;
-		uint32_t val = ntohl(src[bpos / 32]);
-		uint32_t val2 = ntohl(src[bpos / 32 + 1]);
-		if (vpos) {
-			val <<= vpos;
-			val += val2 >> (32 - vpos);
-		}
-
-		int firstbit = 0;
-		val |= 1;
-		for (int i = 31; i >= 0; --i) {
-			if (val & (1 << i)) {
-				firstbit = i;
-				break;
-			}
-		}
-		//printf("msb: %d\n", firstbit);
-
-		val -= (1 << firstbit);
-
-		uint8_t *table = tbl->pointers[firstbit];
-		//printf("length: %d\n", 32-table[0]);
-
-		val >>= table[0];
-		//_p32(val);
-
-		uint8_t sym = table[1 + val];
-		//printf("symbol: 0x%02x\n", sym);
-		dst[opos++] = sym;
-		bpos += tbl->codes[sym] & 0xff;
-		if (dst + opos >= end) {
-			break;
-		}
+	__seomCodecPredict(src, width, height);
+	dst = __seomCodecEncrypt(dst, src, width * height);
+	src += width * height;
+	
+	width >>= 1;
+	height >>= 1;
+	
+	for (int i = 0; i < 2; ++i) {
+		__seomCodecPredict(src, width, height);
+		dst = __seomCodecEncrypt(dst, src, width * height);
+		src += width * height;
 	}
 	
-	return end;
+	return dst;
 }
+
+uint32_t *seomCodecDecode(uint8_t *dst, uint32_t *src, uint32_t width, uint32_t height)
+{
+	src = __seomCodecDecrypt(dst, src, width * height);
+	__seomCodecRestore(dst, width, height);
+	dst += width * height;
+	
+	width >>= 1;
+	height >>= 1;
+	
+	for (int i = 0; i < 2; ++i) {
+		src = __seomCodecDecrypt(dst, src, width * height);
+		__seomCodecRestore(dst, width, height);
+		dst += width * height;
+	}
+	
+	return src;
+}
+
+

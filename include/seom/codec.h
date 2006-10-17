@@ -12,10 +12,7 @@ struct seomCodecTable {
 
 extern struct seomCodecTable seomCodecTable;
 
-extern uint32_t *seomCodecEncode(uint32_t *dst, uint8_t *src, uint8_t *end, struct seomCodecTable *tbl);
-extern uint32_t *seomCodecEncodeReference(uint32_t *dst, uint8_t *src, uint8_t *end, struct seomCodecTable *tbl);
-
-extern uint8_t *seomCodecDecode(uint8_t *dst, uint32_t *src, uint8_t *end, struct seomCodecTable *tbl);
-extern uint8_t *seomCodecDecodeReference(uint8_t *dst, uint32_t *src, uint8_t *end, struct seomCodecTable *tbl);
+uint32_t *seomCodecEncode(uint32_t *dst, uint8_t *src, uint32_t width, uint32_t height);
+uint32_t *seomCodecDecode(uint8_t *dst, uint32_t *src, uint32_t width, uint32_t height);
 
 #endif /* __SEOM_CODEC_H__ */

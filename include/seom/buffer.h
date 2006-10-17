@@ -30,5 +30,4 @@ void seomBufferTailAdvance(seomBuffer *buffer);
 
 uint64_t seomBufferStatus(seomBuffer *buffer);
 
-
 #endif /* __SEOM_BUFFER_H__ */

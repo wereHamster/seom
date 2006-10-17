@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
 {
 	if (argc < 2) {
 		printf("Usage: %s [config namespace]\n", argv[0]);
-		return 0; 
+		argv[1] = "yukon";
 	}
 	
 	Display *dpy = XOpenDisplay(NULL);

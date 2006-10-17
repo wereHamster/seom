@@ -5,7 +5,6 @@
 #include <seom/seom.h>
 
 typedef struct _seomClient seomClient;
-typedef struct _seomClientFrame seomClientFrame;
 
 seomClient *seomClientCreate(Display *dpy, GLXDrawable drawable, const char *ns);
 void seomClientCapture(seomClient *client);
@@ -19,7 +18,7 @@ struct _seomClient {
 	pthread_t thread;
 	
 	seomBuffer *buffer;
-	void (*copy)(uint8_t *out[3], uint32_t *in, uint32_t w, uint32_t h);
+	void (*copy)(seomFrame *dst, seomFrame *src, uint32_t w, uint32_t h);
 	
 	uint32_t area[4];
 	uint32_t size[2];
@@ -34,11 +33,7 @@ struct _seomClient {
 	} stat;
 	
 	int socket;
-};
-
-struct _seomClientFrame {
-	uint64_t pts;
-	uint8_t data[0];
+	seomStream *stream;
 };
 
 void seomResample(uint32_t *buf, uint32_t w, uint32_t h);

@@ -71,3 +71,8 @@ void seomConfigInsets(const char *ns, uint32_t v[4])
 		v[3] = ins[3];
 	}
 }
+
+seomConfig *seomConfigCreate()
+{
+	return NULL;
+}

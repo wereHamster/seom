@@ -4,8 +4,8 @@
 seomBuffer *seomBufferCreate(uint64_t size, uint64_t count)
 {
 	seomBuffer *buffer = malloc(sizeof(seomBuffer) + count * (size + sizeof(void *)));
-	if (buffer == 0) {
-		return 0;
+	if (buffer == NULL) {
+		return NULL;
 	}
 
 	pthread_mutex_init(&buffer->mutex, NULL);
@@ -19,8 +19,8 @@ seomBuffer *seomBufferCreate(uint64_t size, uint64_t count)
 
 	buffer->bufferCount = 0;
 
-	for (uint64_t bufferIndex = 0; bufferIndex < count; ++bufferIndex) {
-		buffer->array[bufferIndex] = (void *)buffer + sizeof(seomBuffer) + count * sizeof(void *) + bufferIndex * size;
+	for (uint64_t index = 0; index < count; ++index) {
+		buffer->array[index] = (void *)buffer + sizeof(seomBuffer) + count * sizeof(void *) + index * size;
 	}
 
 	return buffer;
@@ -36,7 +36,7 @@ void seomBufferDestroy(seomBuffer *buffer)
 
 void *seomBufferHead(seomBuffer *buffer)
 {
-	void *retVal = 0;
+	void *ret = NULL;
 
 	pthread_mutex_lock(&buffer->mutex);
 
@@ -44,11 +44,11 @@ void *seomBufferHead(seomBuffer *buffer)
 		pthread_cond_wait(&buffer->cond, &buffer->mutex);
 	}
 
-	retVal = buffer->array[buffer->head];
+	ret = buffer->array[buffer->head];
 
 	pthread_mutex_unlock(&buffer->mutex);
 
-	return retVal;
+	return ret;
 }
 
 
@@ -66,7 +66,7 @@ void seomBufferHeadAdvance(seomBuffer *buffer)
 
 void *seomBufferTail(seomBuffer *buffer)
 {
-	void *retVal = 0;
+	void *ret = NULL;
 
 	pthread_mutex_lock(&buffer->mutex);
 
@@ -74,11 +74,11 @@ void *seomBufferTail(seomBuffer *buffer)
 		pthread_cond_wait(&buffer->cond, &buffer->mutex);
 	}
 
-	retVal = buffer->array[buffer->tail];
+	ret = buffer->array[buffer->tail];
 
 	pthread_mutex_unlock(&buffer->mutex);
 
-	return retVal;
+	return ret;
 }
 
 void seomBufferTailAdvance(seomBuffer *buffer)

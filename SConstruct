@@ -8,7 +8,7 @@ import SCons.Util
 env = Environment(
 	CC = 'gcc',
 	CPPPATH = ['#include'],
-	CCFLAGS = ['-std=c99', '-pipe', '-O3', '-W', '-Wall'],
+	CCFLAGS = ['-std=c99', '-pipe', '-g', '-W', '-Wall'],
 	LIBS = ['dl', 'pthread'],
 )
 
@@ -16,10 +16,15 @@ src = {
 	'common' : [
 	],
 	'lib' : [
-		'src/lib/buffer.c',
-		'src/lib/client.c',
-		'src/lib/codec.c',
-		'src/lib/config.c',
+		'src/buffer.c',
+		'src/frame.c',
+		'src/codec.c',
+		'src/stream.c',
+		'src/client.c',
+		'src/config.c',
+		'src/server.c',
+		'src/asm/codec.c',
+		'src/asm/frame.c',
 	],
 	'player' : [
 		'src/player/colorspace.c',
@@ -34,27 +39,10 @@ machine = os.uname()[4]
 if re.match('i.86', machine):
 	env['AS'] = 'yasm'
 	env['ASFLAGS'] = '-f elf -m x86'
-	
-	src['common'].append([
-		'src/common/x86/resample.asm',
-		'src/common/x86/convert.asm',
-		'src/common/x86/huffman.asm',
-	])
 elif machine == 'x86_64':
 	env['AS'] = 'yasm'
 	env['ASFLAGS'] = '-f elf -m amd64'
-	
-	src['common'].append([
-		'src/common/amd64/resample.asm',
-		'src/common/amd64/convert.asm',
-		'src/common/amd64/huffman.asm',
-	])
-else:
-	src['common'].append([
-		'src/common/resample.c',
-		'src/common/convert.c',
-		'src/common/huffman.c',
-	])
+
 
 static_obj, shared_obj = SCons.Tool.createObjBuilders(env)
 
@@ -64,7 +52,7 @@ shared_obj.add_emitter('.asm', SCons.Defaults.SharedObjectEmitter)
 objLibrary = env.SharedLibrary('seom', src['lib'] + src['common'])
 env.Install('/usr/lib', objLibrary)
 
-objServer = env.Program('seomServer', src['server'])
+objServer = env.Program('seomServer', src['server'] + ['src/server.c'])
 env.Install('/usr/bin', objServer)
 
 env = env.Copy()
