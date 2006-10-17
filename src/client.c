@@ -1,31 +1,6 @@
 
 #include <seom/seom.h>
 
-static uint32_t streamGet(void *priv, void *data, uint32_t size)
-{
-	seomClient *client = priv;
-	uint32_t *psize = data;
-	
-	psize[0] = htonl(client->dst.size[0]);
-	psize[1] = htonl(client->dst.size[1]);
-	
-	return size;
-}
-
-static uint32_t streamPut(void *priv, void *data, uint32_t size)
-{
-	seomClient *client = priv;
-	write(client->socket, data, size);
-	return size;
-}
-
-static seomStreamOps streamOps = {
-	.get = streamGet,
-	.pos = NULL,
-	.put = streamPut
-};
-
-
 static void *seomClientThreadCallback(void *data)
 {
 	seomClient *client = data;
@@ -70,7 +45,7 @@ static void copyFrameHalf(seomFrame *dst, seomFrame *src, uint32_t w, uint32_t h
 	seomFrameConvert(dst, src, w / 2, h / 2);
 }
 
-seomClient *seomClientCreate(seomConfig *config, uint32_t width, uint32_t height)
+seomClient *seomClientCreate(char *spec, uint32_t width, uint32_t height, double fps)
 {
 	seomClient *client = malloc(sizeof(seomClient));
 	if (client == NULL) {
@@ -78,20 +53,10 @@ seomClient *seomClientCreate(seomConfig *config, uint32_t width, uint32_t height
 		return NULL;
 	}
 	
-	if (config->insets[1] + config->insets[3] > width) {
-		printf("seomClientStart(): right+left insets > width\n");
-		free(client);
-		return NULL;
-	} else if (config->insets[0] + config->insets[2] > height) {
-		printf("seomClientStart(): top+bottom insets > height\n");
-		free(client);
-		return NULL;
-	}
+	client->src.size[0] = width;
+	client->src.size[1] = height;
 	
-	client->src.size[0] = width - config->insets[1] - config->insets[3];
-	client->src.size[1] = height - config->insets[0] - config->insets[2];
-	
-	if (config->scale) {
+	if (0) {
 		client->copy = copyFrameHalf;
 		
 		client->src.size[0] &= (~3);
@@ -109,17 +74,9 @@ seomClient *seomClientCreate(seomConfig *config, uint32_t width, uint32_t height
 		client->dst.size[1] = client->src.size[1];
 	}
 	
-	client->socket = socket(AF_INET, SOCK_STREAM, 0);
-	if (connect(client->socket, &config->addr, sizeof(config->addr))) {
-		close(client->socket);
-		perror("seomClientStart()");
-		free(client);
-		return NULL;
-	}
-	
 	client->buffer = seomBufferCreate(sizeof(seomFrame) + client->src.size[0] * client->src.size[1] * 4, 16);	
 
-	client->interval = config->interval;	
+	client->interval = 100000.0 / fps;	
 	client->stat.captureInterval = client->interval;
 	client->stat.engineInterval = client->interval;
 	client->stat.captureDelay = 0.0;
@@ -129,7 +86,7 @@ seomClient *seomClientCreate(seomConfig *config, uint32_t width, uint32_t height
 	pthread_mutex_init(&client->mutex, NULL);
 	pthread_create(&client->thread, NULL, seomClientThreadCallback, client);
 	
-	client->stream = seomStreamCreate(&streamOps, client);
+	client->stream = seomStreamCreate('o', spec, client->src.size);
 	
 	return client;
 }
@@ -144,8 +101,6 @@ void seomClientDestroy(seomClient *client)
 	
 	seomBufferDestroy(client->buffer);
 	seomStreamDestroy(client->stream);
-	
-	close(client->socket);
 
 	pthread_join(client->thread, NULL);
 	pthread_mutex_destroy(&client->mutex);

@@ -28,11 +28,10 @@ typedef struct seomClient {
 		double engineInterval;
 	} stat;
 	
-	int socket;
 	seomStream *stream;
 } seomClient;
 
-seomClient *seomClientCreate(seomConfig *config, uint32_t width, uint32_t height);
+seomClient *seomClientCreate(char *spec, uint32_t width, uint32_t height, double fps);
 void seomClientCapture(seomClient *client, uint32_t xoffset, uint32_t yoffset);
 void seomClientDestroy(seomClient *client);
 

@@ -56,9 +56,7 @@ int main(int argc, char *argv[])
 	Display *dpy = XOpenDisplay(NULL);
 	Window win = glWindow(dpy, 400, 400);
 	
-	seomConfig *config = seomConfigCreate(argv[1]); 
-	
-	seomClient *client = seomClientCreate(config, 400, 400);
+	seomClient *client = seomClientCreate("ipv4://127.0.0.1", 400, 400, 30.0);
 	if (client == NULL) {
 		printf("couldn't create seomClient\n");
 		return 0; 

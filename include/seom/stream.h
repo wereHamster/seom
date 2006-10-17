@@ -11,13 +11,12 @@ typedef struct seomStreamOps {
 } seomStreamOps;
 
 typedef struct seomStream {
-	seomStreamOps *ops;
-	void *priv;
+	int fd;
 	
 	uint32_t size[2];
 } seomStream;
 
-seomStream *seomStreamCreate(seomStreamOps *ops, void *priv);
+seomStream *seomStreamCreate(char type, char *spec, uint32_t size[2]);
 seomFrame *seomStreamGet(seomStream *stream);
 void seomStreamPut(seomStream *stream, seomFrame *frame);
 void seomStreamDestroy(seomStream *stream);

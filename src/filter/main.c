@@ -15,23 +15,6 @@ static void help(void)
 	);
 }
 
-
-static uint32_t streamGet(void *priv, void *data, uint32_t size)
-{
-	return read(0, data, size);
-}
-
-static uint32_t streamPut(void *priv, void *data, uint32_t size)
-{
-	return size;
-}
-
-static seomStreamOps streamOps = {
-	.get = streamGet,
-	.pos = NULL,
-	.put = streamPut
-};
-
 int main(int argc, char *argv[])
 {
 	int fps = 25;
@@ -59,7 +42,11 @@ int main(int argc, char *argv[])
 	close(0);
 	open(argv[1], O_RDONLY);
 	
-	seomStream *stream = seomStreamCreate(&streamOps, NULL);
+	char spec[4096];
+	snprintf(spec, 4096, "file://%s", argv[1]);
+	
+	uint32_t size[2];
+	seomStream *stream = seomStreamCreate('i', spec, size);
 	
 	char header[4096];
 	int n = snprintf(header, 4096, "YUV4MPEG2 W%d H%d F%d Ip\n", stream->size[0], stream->size[1], fps);
