@@ -8,8 +8,6 @@ typedef struct seomClient {
 	pthread_mutex_t mutex;
 	pthread_t thread;
 	
-	void (*capture)(GLint x, GLint y, GLsizei w, GLsizei h, GLenum f, GLenum t, GLvoid *p);
-	
 	struct {
 		uint32_t size[2];
 	} src;
