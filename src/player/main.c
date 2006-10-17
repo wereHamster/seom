@@ -72,12 +72,6 @@ static void glCaptureCreateWindow(int width, int height)
 
 extern void colorspace_init(void);
 
-/* median(L, LT ,T) => L, L + T - LT, T */
-static uint8_t median(uint8_t L, uint8_t LT, uint8_t T)
-{
-	return ( L + L+T-LT + T) / 3;
-}
-
 static struct timeval barTimer;
 
 static void DrawBarBorder(float xf)
@@ -259,7 +253,7 @@ int main(int argc, char *argv[]) {
 		uint32_t cSize = *(uint32_t *) currentPosition;
 		currentPosition += sizeof(uint32_t);
 		
-		seomCodecDecode(yuvPlanes[0], currentPosition, yuvPlanesSizes[0].x, yuvPlanesSizes[0].y);
+		seomCodecDecode(yuvPlanes[0], (uint32_t *)currentPosition, yuvPlanesSizes[0].x, yuvPlanesSizes[0].y);
 		
 		currentPosition += cSize;
 
