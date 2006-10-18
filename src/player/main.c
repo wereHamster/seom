@@ -225,10 +225,10 @@ int main(int argc, char *argv[])
 		exit(0);
 	}
 
-	uint64_t tt = (time[1] - time[0]) / 1000000;
-	float fps = (float)cFrameTotal / tt;
-	float mbs = (float)statBuffer.st_size / 1024 / 1024 / tt;
-	printf("%llu frames, %llu seconds, %.1f fps, %.1f MiB/s\n", llu(cFrameTotal), llu(tt), fps, mbs);
+	float tt = (float) (time[1] - time[0]) / 1000000.0;
+	float fps = (float) cFrameTotal / tt;
+	float mbs = (float) statBuffer.st_size / 1024 / 1024 / tt;
+	printf("%llu frames, %.2f seconds, %.1f fps, %.1f MiB/s\n", llu(cFrameTotal), tt, fps, mbs);
 
 	uint64_t cTimeTotal = *(uint64_t *) (sourceData + statBuffer.st_size - (width * height * 3 / 2 + sizeof(uint64_t))) - *(uint64_t *) currentPosition;
 	printf("size: %u:%u, cFrameTotal: %llu, time: %llu\n", width, height, llu(cFrameTotal), llu(cTimeTotal / 1000000));
