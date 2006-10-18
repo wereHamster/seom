@@ -38,12 +38,8 @@ int main(int argc, char *argv[])
 		}
 	}
 	
-	/* FIXME */
-	close(0);
-	open(argv[1], O_RDONLY);
-	
 	char spec[4096];
-	snprintf(spec, 4096, "file://%s", argv[1]);
+	snprintf(spec, 4096, "file://%s", argv[argc - 1]);
 	
 	uint32_t size[2];
 	seomStream *stream = seomStreamCreate('i', spec, size);
