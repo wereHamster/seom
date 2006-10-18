@@ -242,11 +242,20 @@ int main(int argc, char *argv[])
 	gettimeofday(&currentTime, 0);
 
 	createWindow(width, height);
+	
+	if (XShmQueryExtension(dpy) == False) {
+		fprintf(stderr, "XShm not available !\n");
+		exit(0);
+	}
 
 	XGCValues xgcvalues;
 	xgcvalues.graphics_exposures = False;
 	GC gc = XCreateGC(dpy, win, GCGraphicsExposures, &xgcvalues);
 	int xvport = XVideoGetPort(dpy);
+	if (xvport < 0) {
+		fprintf(stderr, "Couldn't create XVideo port !\n");
+		exit(0);
+	}
 	XShmSegmentInfo shm;
 	XvImage *img = XvShmCreateImage(dpy, xvport, format, NULL, width, height, &shm);
 
