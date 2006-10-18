@@ -221,6 +221,12 @@ int main(int argc, char *argv[]) {
 	gettimeofday(&currentTime, 0);
 
 	glCaptureCreateWindow(width, height);
+	
+	const char *extensions = glGetString(GL_EXTENSIONS);
+	if (strstr(extensions, "GL_ARB_texture_non_power_of_two") == NULL) {
+		fprintf(stderr, "%s requires the 'GL_ARB_texture_non_power_of_two' extension\n", argv[0]);
+		exit(0);
+	}
 
 	GLuint texture;
 	glGenTextures(1, &texture);
