@@ -306,26 +306,23 @@ int main(int argc, char *argv[])
 		currentPosition += sizeof(uint32_t);
 
 		seomCodecDecode(yuvImage, (uint32_t *) currentPosition, width, height);
-
-		uint8_t *dst = (uint8_t *) img->data + width * (height - 1);
+		
+		uint8_t *dst = (uint8_t *) img->data + img->offsets[0] + img->pitches[0] * (height - 1);
 		uint8_t *src = yuvImage;
-
 		for (uint32_t y = 0; y < height; ++y) {
 			memcpy(dst, src, width);
-			dst -= width;
+			dst -= img->pitches[0];
 			src += width;
 		}
 
-		dst += width * (height + 1);
-
-		for (int i = 0; i < 2; ++i) {
-			dst += width / 2 * (height / 2 - 1);
+		for (int i = 1; i < 3; ++i) {
+			dst = (uint8_t *) img->data + img->offsets[i] + img->pitches[i] * (height / 2 - 1);
 			for (uint32_t y = 0; y < height / 2; ++y) {
 				memcpy(dst, src, width / 2);
-				dst -= width / 2;
+				dst -= img->pitches[i];
 				src += width / 2;
 			}
-			dst += width / 2 * (height / 2 + 1);
+
 		}
 
 		currentPosition += cSize;
