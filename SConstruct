@@ -56,4 +56,3 @@ for file in os.listdir('include/seom'):
 		env.Install('/usr/include/seom', path)
 
 env.Default([ objLibrary, objServer, objPlayer, objFilter, objExample ])
-env.Alias('install', '/usr')
