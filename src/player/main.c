@@ -6,22 +6,152 @@
 
 #include <seom/seom.h>
 
-extern void yv12_to_rgba_c (
-	uint8_t * x_ptr,
-	int x_stride,
-	uint8_t * y_src,
-	uint8_t * v_src,
-	uint8_t * u_src,
-	int y_stride,
-	int uv_stride,
-	int width,
-	int height,
-	int vflip
-);
+#include <sys/shm.h>
+#include <X11/extensions/Xv.h>
+#include <X11/extensions/Xvlib.h>
 
-static uint8_t *yuvPlanes[3];
-static struct { uint64_t x; uint64_t y; } yuvPlanesSizes[3];
-static uint8_t *rgbFrame;
+static const int format = 0x30323449;
+
+static int XVideoGetPort(Display *dpy)
+{
+    XvAdaptorInfo *p_adaptor;
+    unsigned int i;
+    unsigned int i_adaptor, i_num_adaptors;
+    int i_selected_port;
+
+    switch(XvQueryExtension(dpy, &i, &i, &i, &i, &i )) {
+        case Success:
+            break;
+
+        case XvBadExtension:
+            fprintf(stderr, "XvBadExtension");
+            return -1;
+
+        case XvBadAlloc:
+            fprintf(stderr, "XvBadAlloc");
+            return -1;
+
+        default:
+            fprintf(stderr, "XvQueryExtension failed");
+            return -1;
+    }
+
+    switch( XvQueryAdaptors(dpy, DefaultRootWindow(dpy), &i_num_adaptors, &p_adaptor)) {
+        case Success:
+            break;
+
+        case XvBadExtension:
+            fprintf(stderr, "XvBadExtension for XvQueryAdaptors");
+            return -1;
+
+        case XvBadAlloc:
+            fprintf(stderr, "XvBadAlloc for XvQueryAdaptors");
+            return -1;
+
+        default:
+            fprintf(stderr, "XvQueryAdaptors failed");
+            return -1;
+    }
+    
+    printf("%d adaptors\n", i_num_adaptors);
+
+    i_selected_port = -1;
+
+    for( i_adaptor = 0; i_adaptor < i_num_adaptors; ++i_adaptor )
+    {
+        XvImageFormatValues *p_formats;
+        int i_format, i_num_formats;
+        int i_port;
+
+        /* If the adaptor doesn't have the required properties, skip it */
+        if( !( p_adaptor[ i_adaptor ].type & XvInputMask ) ||
+            !( p_adaptor[ i_adaptor ].type & XvImageMask ) )
+        {
+            continue;
+        }
+
+        /* Check that adaptor supports our requested format... */
+        p_formats = XvListImageFormats( dpy,
+                                        p_adaptor[i_adaptor].base_id,
+                                        &i_num_formats );
+
+        for( i_format = 0;
+             i_format < i_num_formats && ( i_selected_port == -1 );
+             i_format++ )
+        {
+            XvAttribute     *p_attr;
+            int             i_attr, i_num_attributes;
+			
+			if (p_formats[ i_format ].id != 0x30323449)
+				continue;
+            /* Look for the first available port supporting this format */
+            for( i_port = p_adaptor[i_adaptor].base_id;
+                 ( i_port < (int)(p_adaptor[i_adaptor].base_id
+                                   + p_adaptor[i_adaptor].num_ports) )
+                   && ( i_selected_port == -1 );
+                 i_port++ )
+            {
+            	
+                if( XvGrabPort( dpy, i_port, CurrentTime )
+                     == Success )
+                {
+                    i_selected_port = i_port;
+                }
+            }
+
+            /* If no free port was found, forget it */
+            if( i_selected_port == -1 )
+            {
+                continue;
+            }
+
+            /* If we found a port, print information about it */
+            fprintf(stderr, "adaptor %i, port %i, format 0x%x (%4.4s) %s\n",
+                     i_adaptor, i_selected_port, p_formats[ i_format ].id,
+                     (char *)&p_formats[ i_format ].id,
+                     ( p_formats[ i_format ].format == XvPacked ) ?
+                         "packed" : "planar" );
+
+            /* Make sure XV_AUTOPAINT_COLORKEY is set */
+            p_attr = XvQueryPortAttributes( dpy,
+                                            i_selected_port,
+                                            &i_num_attributes );
+
+            for( i_attr = 0; i_attr < i_num_attributes; i_attr++ )
+            {
+                if( !strcmp( p_attr[i_attr].name, "XV_AUTOPAINT_COLORKEY" ) )
+                {
+                    const Atom autopaint =
+                        XInternAtom( dpy,
+                                     "XV_AUTOPAINT_COLORKEY", False );
+                    XvSetPortAttribute( dpy,
+                                        i_selected_port, autopaint, 1 );
+                    break;
+                }
+            }
+
+            if( p_attr != NULL )
+            {
+                XFree( p_attr );
+            }
+        }
+
+        if( p_formats != NULL )
+        {
+            XFree( p_formats );
+        }
+
+    }
+
+    if( i_num_adaptors > 0 )
+    {
+        XvFreeAdaptorInfo( p_adaptor );
+    }
+
+    return i_selected_port;
+}
+
+static uint8_t *yuvImage;
 
 static Display *dpy = NULL;
 static Window win = 0;
@@ -36,107 +166,38 @@ static Bool WaitFor__ConfigureNotify(Display *dpy, XEvent *e, char *arg)
 	return dpy && (e->type == ConfigureNotify) && (e->xconfigure.window == (Window) arg);
 }
 
-static void glCaptureCreateWindow(int width, int height)
+static void createWindow(int width, int height)
 {
 	dpy = XOpenDisplay(NULL);
 
-	GLXFBConfig *fbc;
+	XVisualInfo vit;
 	XVisualInfo *vi;
 	Colormap cmap;
 	XSetWindowAttributes swa;
-	GLXContext cx;
 	XEvent event;
-	int nElements;
+	int num;
 
-	int attr[] = { GLX_DOUBLEBUFFER, True, None };
-
-	fbc = glXChooseFBConfig(dpy, DefaultScreen(dpy), attr, &nElements);
-	vi = glXGetVisualFromFBConfig(dpy, fbc[0]);
-
-	cx = glXCreateNewContext(dpy, fbc[0], GLX_RGBA_TYPE, 0, GL_FALSE);
-	cmap = XCreateColormap(dpy, RootWindow(dpy, vi->screen), vi->visual, AllocNone);
+	vit.visualid = XVisualIDFromVisual(DefaultVisual(dpy, DefaultScreen(dpy)));
+	vi = XGetVisualInfo(dpy, VisualIDMask, &vit, &num);
+	cmap = XCreateColormap(dpy, DefaultRootWindow(dpy), vi->visual, AllocNone);
 
 	swa.colormap = cmap;
 	swa.border_pixel = 0;
 	swa.event_mask = 0;
-	win = XCreateWindow(dpy, RootWindow(dpy, vi->screen), 0, 0, width, height, 0, vi->depth, InputOutput, vi->visual, CWBorderPixel | CWColormap | CWEventMask, &swa);
+	win = XCreateWindow(dpy, DefaultRootWindow(dpy), 0, 0, width, height, 0, vi->depth, InputOutput, vi->visual, CWBorderPixel | CWColormap | CWEventMask, &swa);
 	XSelectInput(dpy, win, StructureNotifyMask | KeyPressMask | KeyReleaseMask);
 	XMapWindow(dpy, win);
 	XIfEvent(dpy, &event, WaitFor__MapNotify, (char *)win);
 
 	XMoveWindow(dpy, win, 64, 64);
 	XIfEvent(dpy, &event, WaitFor__ConfigureNotify, (char *)win);
-
-	glXMakeCurrent(dpy, win, cx);
 }
 
-extern void colorspace_init(void);
+static int xOffset;
+static int yOffset;
 
-static struct timeval barTimer;
-
-static void DrawBarBorder(float xf)
-{
-	static const float t = 0.02;
-	static const float x = 0.95;
-	static const float w = 0.03;
-	static const float h = 0.05;
-	
-	glBegin(GL_TRIANGLE_FAN);
-		glVertex2f(xf * ( x - t ), h);
-		glVertex2f(xf * ( x - t - w ), h);
-		glVertex2f(xf * ( x - t - w ), h + t);
-		glVertex2f(xf * ( x ), h + t);
-		glVertex2f(xf * ( x ), -h - t);
-		glVertex2f(xf * ( x - t ), -h);
-	glEnd();
-	
-	glBegin(GL_TRIANGLE_FAN);
-		glVertex2f(xf * ( x - t ), -h );
-		glVertex2f(xf * ( x ), -h - t);
-		glVertex2f(xf * ( x - t - w ), -h - t);
-		glVertex2f(xf * ( x - t - w ), -h);
-	glEnd();
-}
-
-static int barSticky;
-
-static void DrawBar(float val)
-{
-	glDisable(GL_TEXTURE_2D);
-	
-	struct timeval currentTime = { 0, 0 };
-	gettimeofday(&currentTime, 0);
-	
-	struct timeval elapsed = { 0, 0 };
-	timersub(&currentTime, &barTimer, &elapsed);
-	
-	float e = elapsed.tv_sec * 1000000 + elapsed.tv_usec;
-	
-	static const float fade = 5 * 1000000;
-	
-	float alpha = fade - e;
-	if (barSticky) {
-		alpha = 2000000;
-	}
-	if (alpha > 0.0) {
-		glColor4f(1.0, 1.0, 1.0, alpha / fade);
-		
-		DrawBarBorder(-1.0);
-		DrawBarBorder( 1.0);
-	
-		glBegin(GL_QUADS);
-			float x = ( 0.92 + 0.92 ) * val;
-			glVertex2f(-0.92, -0.04);
-			glVertex2f(-0.92 + x, -0.04);
-			glVertex2f(-0.92 + x, 0.04);
-			glVertex2f(-0.92, 0.04);
-		glEnd();
-	
-		glColor4f(1.0, 1.0, 1.0, 1.0);
-	}
-	
-	glEnable(GL_TEXTURE_2D);
-}
+static int dWidth;
+static int dHeight;
 
 int main(int argc, char *argv[]) {
 	if (argc < 2) {
@@ -149,8 +210,6 @@ int main(int argc, char *argv[]) {
 		perror("can't open infile");
 		exit(-1);
 	}
-	
-	colorspace_init();
 
 	struct stat statBuffer;
 	fstat(inFile, &statBuffer);
@@ -201,41 +260,19 @@ int main(int argc, char *argv[]) {
 
 	uint64_t rawFrames = (statBuffer.st_size - 2 * sizeof(uint32_t)) / (width * height * 3 / 2 + sizeof(uint64_t));
 	printf("ratio: %.3f\n", (float)rawFrames / cFrameTotal);
-
 	
-	yuvPlanesSizes[0].x = width;
-	yuvPlanesSizes[0].y = height;
-	
-	yuvPlanesSizes[1].x = width / 2;
-	yuvPlanesSizes[1].y = height / 2;
-	
-	yuvPlanesSizes[2].x = width / 2;
-	yuvPlanesSizes[2].y = height / 2;
-	
-	rgbFrame = malloc(width * height * 4);
-	yuvPlanes[0] = malloc(width * height * 3 / 2);
-	yuvPlanes[1] = yuvPlanes[0] + yuvPlanesSizes[0].x * yuvPlanesSizes[0].y;
-	yuvPlanes[2] = yuvPlanes[1] + yuvPlanesSizes[1].x * yuvPlanesSizes[1].y;
+	yuvImage = malloc(width * height * 3 / 2);
 
 	struct timeval currentTime = { 0, 0 };
 	gettimeofday(&currentTime, 0);
 
-	glCaptureCreateWindow(width, height);
+	createWindow(width, height);
 	
-	const char *extensions = (const char *) glGetString(GL_EXTENSIONS);
-	if (strstr(extensions, "GL_ARB_texture_non_power_of_two") == NULL) {
-		fprintf(stderr, "%s requires the 'GL_ARB_texture_non_power_of_two' extension\n", argv[0]);
-		fprintf(stderr, "Use seomFilter to convert the video to y4m: $ seomFilter %s > video.y4m\n", argv[1]);
-		fprintf(stderr, "and open video.y4m with mplayer/vlc or any other video player that supports the y4m file format\n");
-		exit(0);
-	}
-
-	GLuint texture;
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glEnable(GL_TEXTURE_2D);
+	XGCValues xgcvalues;
+	xgcvalues.graphics_exposures = False;
+	GC gc = XCreateGC(dpy, win, GCGraphicsExposures, &xgcvalues);
+	int xvport = XVideoGetPort(dpy);
+	XvImage *img = XvCreateImage(dpy, xvport, format, (char *)yuvImage, width, height);
 
 	uint64_t firstFrame = *(uint64_t *) currentPosition;
 	uint64_t pts = firstFrame;
@@ -245,14 +282,7 @@ int main(int argc, char *argv[]) {
 
 	uint64_t fIndex = 0;
 	
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	
 	int pause = 0;
-	
-	gettimeofday(&barTimer, 0);
-	
-	barTimer.tv_sec -= 10;
 	
 	for (;;) {
 		pts = *(uint64_t *) currentPosition;
@@ -261,27 +291,9 @@ int main(int argc, char *argv[]) {
 		uint32_t cSize = *(uint32_t *) currentPosition;
 		currentPosition += sizeof(uint32_t);
 		
-		seomCodecDecode(yuvPlanes[0], (uint32_t *)currentPosition, yuvPlanesSizes[0].x, yuvPlanesSizes[0].y);
+		seomCodecDecode(yuvImage, (uint32_t *)currentPosition, width, height);
 		
 		currentPosition += cSize;
-
-		yv12_to_rgba_c(rgbFrame, width * 4, yuvPlanes[0], yuvPlanes[1], yuvPlanes[2], width, width / 2, width, height, 0);
-		glTexImage2D(GL_TEXTURE_2D, 0, 4, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, rgbFrame);
-
-		glClear(GL_COLOR_BUFFER_BIT);
-		
-		glBegin(GL_QUADS);
-		glTexCoord2d(0.0, 0.0);
-		glVertex2d(-1.0, -1.0);
-		glTexCoord2d(1.0, 0.0);
-		glVertex2d(1.0, -1.0);
-		glTexCoord2d(1.0, 1.0);
-		glVertex2d(1.0, 1.0);
-		glTexCoord2d(0.0, 1.0);
-		glVertex2d(-1.0, 1.0);
-		glEnd();
-		
-		DrawBar((float)fIndex / (cFrameTotal));
 		
 		gettimeofday(&currentTime, 0);
 		uint64_t now = currentTime.tv_sec * 1000000 + currentTime.tv_usec;
@@ -291,10 +303,9 @@ int main(int argc, char *argv[]) {
 		} else {
 			tdiff = now - pts;
 		}
-		
-		glXSwapBuffers(dpy, win);
+		XvPutImage(dpy, xvport, win, gc, img, 0, 0, width, height, xOffset, yOffset, dWidth, dHeight);
 
-		fprintf(stderr, "encoded frames: %llu/%llu \r", llu(fIndex), llu(cFrameTotal));
+		fprintf(stderr, "position: %llu/%llu \r", llu(fIndex), llu(cFrameTotal));
 
 		int skipFrames = pause ? 0 : 1;
 		while (XPending(dpy)) {
@@ -321,11 +332,6 @@ int main(int argc, char *argv[]) {
 					break;
 				case XK_o:
 					XResizeWindow(dpy, win, width, height);
-					//XIfEvent(dpy, &e, WaitFor__ConfigureNotify, (char *)win);
-					glViewport(0, 0, width, height);
-					break;
-				case XK_b:
-					barSticky = !barSticky;
 					break;
 				case XK_f:
 					memset(&event, 0, sizeof(XClientMessageEvent));
@@ -351,19 +357,19 @@ int main(int argc, char *argv[]) {
 				glViewport(0, 0, e.xconfigure.width, e.xconfigure.height);
 				glClear(GL_COLOR_BUFFER_BIT);
 				
-				int w = e.xconfigure.width;
-				int h = e.xconfigure.height;
+				XFillRectangle(dpy, win, gc, 0, 0, e.xconfigure.width, e.xconfigure.height);
 				
-				if ((float)width / height < (float)w / h) {
-					w = h * width / height;
+				dWidth = e.xconfigure.width;
+				dHeight = e.xconfigure.height;
+				
+				if ((float)width / height < (float)dWidth / dHeight) {
+					dWidth = dHeight * width / height;
 				} else {
-					h = w * height / width;
+					dHeight = dWidth * height / width;
 				}
 				
-				int x = ( e.xconfigure.width - w ) / 2;
-				int y = ( e.xconfigure.height - h ) / 2;
-				
-				glViewport(x, y, w, h);
+				xOffset = ( e.xconfigure.width - dWidth ) / 2;
+				yOffset = ( e.xconfigure.height - dHeight ) / 2;
 				break;
 			default:
 				break;
@@ -393,9 +399,7 @@ int main(int argc, char *argv[]) {
 			}
 			pts = *(uint64_t *) currentPosition;
 			
-			if (skipFrames > 1 || skipFrames < 0) {
-				gettimeofday(&barTimer, 0);
-				
+			if (skipFrames > 1 || skipFrames < 0) {				
 				gettimeofday(&currentTime, 0);
 				tdiff = currentTime.tv_sec * 1000000 + currentTime.tv_usec - pts;
 			}

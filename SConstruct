@@ -22,7 +22,6 @@ src = {
 		'src/asm/frame.c',
 	],
 	'player' : [
-		'src/player/colorspace.c',
 		'src/player/main.c',
 	],
 	'server' : [
@@ -43,7 +42,7 @@ objFilter = env.Program('seomFilter', ['src/filter/main.c'])
 env.Install('/usr/bin', objFilter)
 
 env = env.Copy()
-env.Append(LIBS = ['GL', 'X11'])
+env.Append(LIBS = ['GL', 'X11', 'Xv'])
 
 objPlayer = env.Program('seomPlayer', src['player'])
 env.Install('/usr/bin', objPlayer)
