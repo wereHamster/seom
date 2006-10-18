@@ -82,7 +82,7 @@ seomClient *seomClientCreate(char *spec, uint32_t width, uint32_t height, double
 	
 	client->buffer = seomBufferCreate(sizeof(seomFrame) + client->src.size[0] * client->src.size[1] * 4, 16);	
 
-	client->interval = 100000.0 / fps;	
+	client->interval = 1000000.0 / (1.1 * fps);	
 	client->stat.captureInterval = client->interval;
 	client->stat.engineInterval = client->interval;
 	client->stat.captureDelay = 0.0;
