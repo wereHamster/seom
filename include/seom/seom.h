@@ -44,7 +44,12 @@
 #include <seom/stream.h>
 #include <seom/client.h>
 
-#define seomTime() ({ struct timeval tv; gettimeofday(&tv, 0); tv.tv_sec * 1000000 + tv.tv_usec; })
+/*
+typedef seomTime uint64_t
+#define seomTimeCurrent() ({ struct timeval tv; gettimeofday(&tv, 0); (seomTime) tv.tv_sec * 1000000 + tv.tv_usec; })
+*/
+
+#define seomTime() ({ struct timeval tv; gettimeofday(&tv, 0); (uint64_t) tv.tv_sec * 1000000 + tv.tv_usec; })
 	
 
 #endif /* __SEOM_H__ */
