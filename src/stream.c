@@ -4,12 +4,13 @@
 seomStream *seomStreamCreate(char type, char *spec, uint32_t size[2])
 {
 	seomStream *stream = malloc(sizeof(seomStream));
+	stream->fd = -1;
 	
 	if (strncmp(spec, "file://", 7) == 0) {
 		fprintf(stderr, "file:// output: %s\n", &spec[7]);
 		if (type == 'o') {
-			stream->fd = open(&spec[7], O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IRGRP | S_IROTH);
-		} else {
+			stream->fd = open(&spec[7], O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
+		} else if (type == 'i') {
 			stream->fd = open(&spec[7], O_RDONLY);
 		}
 	} else if (strncmp(spec, "unix://", 7) == 0) {
@@ -55,21 +56,21 @@ seomStream *seomStreamCreate(char type, char *spec, uint32_t size[2])
 	size[0] = stream->size[0] = ntohl(stream->size[0]);
 	size[1] = stream->size[1] = ntohl(stream->size[1]);
 	
+	stream->buffer = malloc(stream->size[0] * stream->size[1] * 4);
+	
 	return stream;
 }
 
 void seomStreamPut(seomStream *stream, seomFrame *frame)
 {
-	uint64_t pts = frame->pts;
+	uint64_t pts = frame->pts;	
 	
-	static uint32_t tmp[1280 * 1024 * 4 * 8];	
-	
-	uint32_t *end = seomCodecEncode(tmp, frame->data, stream->size[0], stream->size[1]);
-	uint32_t len = (end - &tmp[0]) * sizeof(uint32_t);
+	uint32_t *end = seomCodecEncode(stream->buffer, frame->data, stream->size[0], stream->size[1]);
+	uint32_t len = (end - stream->buffer) * sizeof(uint32_t);
 	
 	write(stream->fd, &pts, sizeof(pts));
 	write(stream->fd, &len, sizeof(len));
-	write(stream->fd, tmp, len);
+	write(stream->fd, stream->buffer, len);
 }
 
 uint64_t seomStreamPos(seomStream *stream, uint64_t pos)
@@ -104,5 +105,7 @@ seomFrame *seomStreamGet(seomStream *stream)
 
 void seomStreamDestroy(seomStream *stream)
 {
+	close(stream->fd);
+	free(stream->buffer);
 	free(stream);
 }

@@ -14,6 +14,8 @@ typedef struct seomStream {
 	int fd;
 	
 	uint32_t size[2];
+	
+	uint32_t *buffer;
 } seomStream;
 
 seomStream *seomStreamCreate(char type, char *spec, uint32_t size[2]);

@@ -74,6 +74,12 @@ seomClient *seomClientCreate(char *spec, uint32_t width, uint32_t height, double
 		client->dst.size[1] = client->src.size[1];
 	}
 	
+	client->stream = seomStreamCreate('o', spec, client->src.size);
+	if (client->stream == NULL) {
+		free(client);
+		return NULL;
+	}
+	
 	client->buffer = seomBufferCreate(sizeof(seomFrame) + client->src.size[0] * client->src.size[1] * 4, 16);	
 
 	client->interval = 100000.0 / fps;	
@@ -85,8 +91,6 @@ seomClient *seomClientCreate(char *spec, uint32_t width, uint32_t height, double
 	
 	pthread_mutex_init(&client->mutex, NULL);
 	pthread_create(&client->thread, NULL, seomClientThreadCallback, client);
-	
-	client->stream = seomStreamCreate('o', spec, client->src.size);
 	
 	return client;
 }
