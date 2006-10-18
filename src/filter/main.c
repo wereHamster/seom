@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
 	seomStream *stream = seomStreamCreate('i', spec, size);
 	
 	char header[4096];
-	int n = snprintf(header, 4096, "YUV4MPEG2 W%d H%d F%d Ip\n", stream->size[0], stream->size[1], fps);
+	int n = snprintf(header, 4096, "YUV4MPEG2 W%d H%d F%d:1 Ip\n", stream->size[0], stream->size[1], fps);
 	write(1, header, strlen(header));
 	
 	for (;;) {
