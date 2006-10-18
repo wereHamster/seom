@@ -7,16 +7,32 @@ seomStream *seomStreamCreate(char type, char *spec, uint32_t size[2])
 	stream->fd = -1;
 	
 	if (strncmp(spec, "file://", 7) == 0) {
-		fprintf(stderr, "file:// output: %s\n", &spec[7]);
+		fprintf(stderr, "file:// path: %s\n", &spec[7]);
 		if (type == 'o') {
 			stream->fd = open(&spec[7], O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
 		} else if (type == 'i') {
 			stream->fd = open(&spec[7], O_RDONLY);
 		}
+	} else if (strncmp(spec, "path://", 7) == 0) {
+		if (type == 'i') {
+			fprintf(stderr, "path:// input not supported !\n");
+			free(stream);
+			return NULL;
+		}
+		char buffer[4096];
+		time_t tim = time(NULL);
+		struct tm *tm = localtime(&tim);
+		snprintf(buffer, 4096, "%s/%d-%02d-%02d--%02d:%02d:%02d.seom", &spec[7], tm->tm_year+1900, tm->tm_mon+1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
+		fprintf(stderr, "path:// output: %s\n", buffer);
+		stream->fd = open(buffer, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
 	} else if (strncmp(spec, "unix://", 7) == 0) {
-		fprintf(stderr, "unix:// output: %s\n", &spec[7]);
-		stream->fd = open(&spec[7], O_RDWR);
+		fprintf(stderr, "unix sockets unsupported !\n");
 	} else if (strncmp(spec, "ipv4://", 7) == 0) {
+		if (type == 'i') {
+			fprintf(stderr, "ipv4:// input not supported !\n");
+			free(stream);
+			return NULL;
+		}
 		struct sockaddr_in addr = {
 			.sin_family = AF_INET,
 			.sin_port = htons(42803),
