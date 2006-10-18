@@ -225,6 +225,8 @@ int main(int argc, char *argv[]) {
 	const char *extensions = glGetString(GL_EXTENSIONS);
 	if (strstr(extensions, "GL_ARB_texture_non_power_of_two") == NULL) {
 		fprintf(stderr, "%s requires the 'GL_ARB_texture_non_power_of_two' extension\n", argv[0]);
+		fprintf(stderr, "Use seomFilter to convert the video to y4m: $ seomFilter %s > video.y4m\n", argv[1]);
+		fprintf(stderr, "Use seomFilter to convert the video to y4m: $ seomFilter %s > video.y4m\n", argv[1]);
 		exit(0);
 	}
 
