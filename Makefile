@@ -1,5 +1,4 @@
 PREFIX=/usr
-DESTDIR = $(PREFIX)/lib
 
 CC      = gcc
 LIBTOOL = libtool
@@ -41,8 +40,9 @@ $(APPS): libseom.la
 	$(CC) $(CFLAGS) -L.libs $(LDFLAGS) $($@LIBS) -o seom-$@ src/$@/main.c
 
 install: libseom.la $(APPS)
+	install -m 0755 -d $(PREFIX)/include/seom $(PREFIX)/lib $(PREFIX)/bin
 	install -m 0644 include/seom/* $(PREFIX)/include/seom
-	$(LIBTOOL) --mode=install $(INSTALL) libseom.la $(DESTDIR)/libseom.la
+	$(LIBTOOL) --mode=install $(INSTALL) libseom.la $(PREFIX)/lib/libseom.la
 	install -m 0755 seom-filter $(PREFIX)/bin/seom-filter
 	install -m 0755 seom-player $(PREFIX)/bin/seom-player
 	install -m 0755 seom-server $(PREFIX)/bin/seom-server
