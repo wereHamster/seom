@@ -387,9 +387,6 @@ int main(int argc, char *argv[])
 				}
 				break;
 			case ConfigureNotify:
-				glViewport(0, 0, e.xconfigure.width, e.xconfigure.height);
-				glClear(GL_COLOR_BUFFER_BIT);
-
 				XFillRectangle(dpy, win, gc, 0, 0, e.xconfigure.width, e.xconfigure.height);
 
 				dWidth = e.xconfigure.width;

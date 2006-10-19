@@ -42,10 +42,13 @@ objFilter = env.Program('seomFilter', ['src/filter/main.c'])
 env.Install('/usr/bin', objFilter)
 
 env = env.Copy()
-env.Append(LIBS = ['GL', 'X11', 'Xv'])
+env.Append(LIBS = ['X11', 'Xv'])
 
 objPlayer = env.Program('seomPlayer', src['player'])
 env.Install('/usr/bin', objPlayer)
+
+env = env.Copy()
+env.Append(LIBS = ['GL'])
 
 objExample = env.Program('example', 'example.c')
 
