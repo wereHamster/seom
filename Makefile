@@ -41,6 +41,7 @@ $(APPS): libseom.la
 	$(CC) $(CFLAGS) -L.libs $(LDFLAGS) $($@LIBS) -o seom-$@ src/$@/main.c
 
 install: libseom.la $(APPS)
+	install -m 0644 include/seom/* $(PREFIX)/include/seom
 	$(LIBTOOL) --mode=install $(INSTALL) libseom.la $(DESTDIR)/libseom.la
 	install -m 0755 seom-filter $(PREFIX)/bin/seom-filter
 	install -m 0755 seom-player $(PREFIX)/bin/seom-player
