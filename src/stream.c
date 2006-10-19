@@ -96,23 +96,21 @@ uint64_t seomStreamPos(seomStream *stream, uint64_t pos)
 
 seomFrame *seomStreamGet(seomStream *stream)
 {
-	seomFrame *frame = seomFrameCreate('c', stream->size[0], stream->size[1]);
-	
 	uint64_t pts;
 	if (read(stream->fd, &pts, sizeof(pts)) == 0) {
-		seomFrameDestroy(frame);
 		return NULL;
 	}
 	
+	seomFrame *frame = seomFrameCreate('c', stream->size[0], stream->size[1]);
+	frame->pts = pts;
+	
 	uint32_t len;
 	read(stream->fd, &len, sizeof(len));
+	read(stream->fd, stream->buffer, len);
 	
-	static uint32_t tmp[1280 * 1024 * 4];
-	read(stream->fd, tmp, len);
+	uint32_t *end = seomCodecDecode(frame->data, stream->buffer, stream->size[0], stream->size[1]);
 	
-	uint32_t *end = seomCodecDecode(frame->data, tmp, stream->size[0], stream->size[1]);
-	
-	if ((end - &tmp[0]) * sizeof(uint32_t) != len) {
+	if ((end - stream->buffer) * sizeof(uint32_t) != len) {
 		return frame;
 	}
 	
