@@ -338,7 +338,7 @@ int main(int argc, char *argv[])
 		XvShmPutImage(dpy, xvport, win, gc, img, 0, 0, width, height, xOffset, yOffset, dWidth, dHeight, False);
 		XSync(dpy, False);
 
-		fprintf(stderr, "position: %llu/%llu \r", llu(fIndex), llu(cFrameTotal));
+		fprintf(stderr, "   position: %6llu/%llu   %5.2f%% \r", llu(fIndex), llu(cFrameTotal), (float) 100 * fIndex / cFrameTotal);
 
 		int skipFrames = pause ? 0 : 1;
 		while (XPending(dpy)) {
