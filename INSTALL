@@ -1,0 +1,9 @@
+
+You need libtool and whatnot, but usually all the required tools are already
+installed.
+
+As for the libraries, seom-player requires the XVideo/XShm extensions, which
+I hope you have installed.
+
+Installing seom is then as easy as executing 'make' and then 'make install' as
+root.
