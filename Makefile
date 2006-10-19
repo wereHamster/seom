@@ -31,7 +31,7 @@ all: libseom.la $(APPS)
 	$(LIBTOOL) --mode=compile $(CC) $(CFLAGS) -c -o $@ $<
 
 libseom.la: $(OBJS)
-	$(LIBTOOL) --mode=link $(CC) $(LDFLAGS) -rpath $(DESTDIR) -o $@ $(OBJS)
+	$(LIBTOOL) --mode=link $(CC) $(LDFLAGS) -rpath $(PREFIX)/lib -o $@ $(OBJS)
 
 example: example.c
 	$(CC) $(CFLAGS) -L.libs $(LDFLAGS) -lseom -lX11 -lGL -o example $<
