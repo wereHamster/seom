@@ -1,8 +1,11 @@
-PREFIX=/usr
 
-CC      = gcc
-LIBTOOL = libtool
-INSTALL = install
+PREFIX   = /usr
+DESTDIR  = $(PREFIX)
+LIBDIR   = lib
+
+CC       = gcc
+LIBTOOL  = libtool
+INSTALL  = install
 
 CFLAGS  = -Iinclude -std=c99 -pipe -O3 -W -Wall
 LDFLAGS = -ldl -lpthread
@@ -20,9 +23,9 @@ SRC = src/buffer.c         \
 OBJS = $(SRC:%.c=%.lo)
 
 APPS = filter player server
-filterLIBS = -lseom
-playerLIBS = -lseom -lX11 -lXv
-serverLIBS = -lseom
+filterLIBS =
+playerLIBS = -lX11 -lXv
+serverLIBS =
 
 .PHONY: all clean install
 all: libseom.la $(APPS)
@@ -31,22 +34,21 @@ all: libseom.la $(APPS)
 	$(LIBTOOL) --mode=compile $(CC) $(CFLAGS) -c -o $@ $<
 
 libseom.la: $(OBJS)
-	$(LIBTOOL) --mode=link $(CC) $(LDFLAGS) -rpath $(PREFIX)/lib -o $@ $(OBJS)
+	$(LIBTOOL) --mode=link $(CC) $(LDFLAGS) -rpath $(PREFIX)/$(LIBDIR) -o $@ $(OBJS)
 
 example: example.c
-	$(CC) $(CFLAGS) -L.libs $(LDFLAGS) -lseom -lX11 -lGL -o example $<
+	$(CC) $(CFLAGS) $(LDFLAGS) -L.libs -lseom -lX11 -lGL -o example $<
 
 $(APPS): libseom.la
-	$(CC) $(CFLAGS) -L.libs $(LDFLAGS) $($@LIBS) -o seom-$@ src/$@/main.c
+	$(CC) $(CFLAGS) $(LDFLAGS) -L.libs -lseom $($@LIBS) -o seom-$@ src/$@/main.c
 
 install: libseom.la $(APPS)
-	install -m 0755 -d $(PREFIX)/include/seom $(PREFIX)/lib $(PREFIX)/bin
-	install -m 0644 include/seom/* $(PREFIX)/include/seom
-	$(LIBTOOL) --mode=install $(INSTALL) libseom.la $(PREFIX)/lib/libseom.la
-	install -m 0755 seom-filter $(PREFIX)/bin/seom-filter
-	install -m 0755 seom-player $(PREFIX)/bin/seom-player
-	install -m 0755 seom-server $(PREFIX)/bin/seom-server
+	install -m 0755 -d $(DESTDIR)/include/seom $(DESTDIR)/$(LIBDIR) $(DESTDIR)/bin
+	install -m 0644 include/seom/* $(DESTDIR)/include/seom
+	$(LIBTOOL) --mode=install $(INSTALL) libseom.la $(DESTDIR)/$(LIBDIR)/libseom.la
+	install -m 0755 seom-filter $(DESTDIR)/bin/seom-filter
+	install -m 0755 seom-player $(DESTDIR)/bin/seom-player
+	install -m 0755 seom-server $(DESTDIR)/bin/seom-server
 
 clean:
-	rm -rf $(OBJS) .libs libseom.* seom-* example
-
+	rm -rf $(OBJS) .libs srd/.libs src/asm/.libs libseom.* seom-* example
