@@ -7,7 +7,8 @@ static const int version[3] = { 0, 1, 0 };
 
 static void help(void)
 {
-	printf("seomFilter version %d.%d.%d\n"
+	printf(
+		"seomFilter version %d.%d.%d\n"
 		"\t-r:  frames per second\n"
 		"\t-h:  print help text\n",
 		version[0], version[1], version[2]
@@ -80,7 +81,6 @@ int main(int argc, char *argv[])
 
 	for (;;) {
 		while (diff(frames[0]->pts, timeNext) > diff(frames[1]->pts, timeNext)) {
-			fprintf(stderr, "skip\n");
 			seomFrameDestroy(frames[0]);
 			frames[0] = frames[1];
 			frames[1] = seomStreamGet(stream);
@@ -89,14 +89,11 @@ int main(int argc, char *argv[])
 			}
 		}
 
-		fprintf(stderr, "write\n");
 		writeFrame(1, frames[0], stream->size[0], stream->size[1]);
 		timeNext += timeStep;
 	}
 
 out:
-	fprintf(stderr, "end\n");
-
 	writeFrame(1, frames[0], stream->size[0], stream->size[1]);
 	seomFrameDestroy(frames[0]);
 
