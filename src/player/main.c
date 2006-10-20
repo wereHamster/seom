@@ -202,6 +202,7 @@ int main(int argc, char *argv[])
 	unsigned char *mem = currentPosition;
 	uint64_t time[2];
 	time[0] = *(uint64_t *) mem;
+	time[1] = 0;
 	for (;;) {
 		if (mem >= sourceData + statBuffer.st_size) {
 			break;
