@@ -40,7 +40,7 @@ static void sighandler(int signum)
 static void help(void)
 {
 	printf(
-		"seomServer version %d.%d.%d\n"
+		"seom-server version %d.%d.%d\n"
 		"\t-o, --outdir:  output directory prefix\n"
 		"\t-v, --version: print version info\n"
 		"\t-h, --help:    print help text\n"

@@ -8,7 +8,7 @@ static const int version[3] = { 0, 1, 0 };
 static void help(void)
 {
 	printf(
-		"seomFilter version %d.%d.%d\n"
+		"seom-filter version %d.%d.%d\n"
 		"\t-r:  frames per second\n"
 		"\t-h:  print help text\n",
 		version[0], version[1], version[2]
@@ -44,6 +44,12 @@ static uint64_t diff(uint64_t t1, uint64_t t2)
 int main(int argc, char *argv[])
 {
 	int fps = 25;
+
+	// TODO: Instead of bombing here, we should instead open STDIN somehow.
+	if (argc < 2) {
+		help();
+		exit(1);
+	}
 
 	for (;;) {
 		int c = getopt(argc, argv, "r:h");
