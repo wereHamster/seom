@@ -203,14 +203,14 @@ int main(int argc, char *argv[])
 	uint64_t time[2];
 	time[0] = *(uint64_t *) mem;
 	for (;;) {
+		if (mem >= sourceData + statBuffer.st_size) {
+			break;
+		}
+
 		time[1] = *(uint64_t *) mem;
 		mem += sizeof(uint64_t);
 		uint32_t cSize = *(uint32_t *) mem;
 		mem += sizeof(uint32_t) + cSize;
-
-		if (mem >= sourceData + statBuffer.st_size) {
-			break;
-		}
 
 		++cFrameTotal;
 
@@ -338,7 +338,7 @@ int main(int argc, char *argv[])
 		XvShmPutImage(dpy, xvport, win, gc, img, 0, 0, width, height, xOffset, yOffset, dWidth, dHeight, False);
 		XSync(dpy, False);
 
-		fprintf(stderr, "   position: %6llu/%llu   %5.2f%% \r", llu(fIndex), llu(cFrameTotal), (float) 100 * fIndex / cFrameTotal);
+		fprintf(stderr, "   position: %6llu/%llu   %5.2f%% \r", llu(fIndex + 1), llu(cFrameTotal), (float) 100 * fIndex / (cFrameTotal - 1));
 
 		int skipFrames = pause ? 0 : 1;
 		while (XPending(dpy)) {
@@ -409,7 +409,7 @@ int main(int argc, char *argv[])
 		if (skipFrames < 0 && -skipFrames > (int)fIndex) {
 			fIndex = 0;
 		} else if (skipFrames > 0 && fIndex + skipFrames >= cFrameTotal) {
-			fIndex = cFrameTotal;
+			fIndex = cFrameTotal - 1;
 			pause = 1;
 		} else {
 			fIndex += skipFrames;
@@ -418,14 +418,14 @@ int main(int argc, char *argv[])
 		if (1) {
 			currentPosition = sourceData + 2 * sizeof(uint32_t);
 			for (unsigned int i = 0; i < fIndex; ++i) {
+				if (currentPosition >= sourceData + statBuffer.st_size) {
+					break;
+				}
+
 				pts = *(uint64_t *) currentPosition;
 				currentPosition += sizeof(uint64_t);
 				uint32_t cSize = *(uint32_t *) currentPosition;
 				currentPosition += sizeof(uint32_t) + cSize;
-
-				if (currentPosition >= sourceData + statBuffer.st_size) {
-					break;
-				}
 			}
 			pts = *(uint64_t *) currentPosition;
 
