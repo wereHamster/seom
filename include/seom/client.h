@@ -26,13 +26,13 @@ typedef struct seomClient {
 } seomClient;
 
 typedef struct seomClientConfig {
-	char *spec;
 	uint32_t size[2];
+	uint32_t scale;
 	double fps;
-	uint8_t scale;
+	char *output;
 } seomClientConfig;
 
-seomClient *seomClientCreate(char *spec, uint32_t width, uint32_t height, double fps);
+seomClient *seomClientCreate(seomClientConfig *config);
 void seomClientCapture(seomClient *client, uint32_t xoffset, uint32_t yoffset);
 void seomClientDestroy(seomClient *client);
 

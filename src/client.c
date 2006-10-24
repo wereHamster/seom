@@ -52,7 +52,7 @@ static void *seomClientThreadCallback(void *data)
 	return NULL;
 }
 
-seomClient *seomClientCreate(char *spec, uint32_t width, uint32_t height, double fps)
+seomClient *seomClientCreate(seomClientConfig *config)
 {
 	seomClient *client = malloc(sizeof(seomClient));
 	if (client == NULL) {
@@ -60,13 +60,18 @@ seomClient *seomClientCreate(char *spec, uint32_t width, uint32_t height, double
 		return NULL;
 	}
 	
-	client->scale = 0;
+	client->scale = config->scale;
 	
-	client->size[0] = width & ~(client->scale + 1);
-	client->size[1] = height & ~(client->scale + 1);
+	client->size[0] = config->size[0] & ~((1 << (client->scale + 1)) - 1);
+	client->size[1] = config->size[1] & ~((1 << (client->scale + 1)) - 1);
 	
 	uint32_t size[2] = { client->size[0] >> client->scale, client->size[1] >> client->scale };
-	client->stream = seomStreamCreate('o', spec, size);
+	if (size[0] == 0 || size[1] == 0) {
+		free(client);
+		return NULL;
+	}
+	
+	client->stream = seomStreamCreate('o', config->output, size);
 	if (client->stream == NULL) {
 		free(client);
 		return NULL;
@@ -74,7 +79,7 @@ seomClient *seomClientCreate(char *spec, uint32_t width, uint32_t height, double
 	
 	client->buffer = seomBufferCreate(sizeof(seomFrame) + client->size[0] * client->size[1] * 4, 16);	
 
-	client->interval = 1000000.0 / (1.1 * fps);	
+	client->interval = 1000000.0 / (1.1 * config->fps);	
 	client->stat.captureInterval = client->interval;
 	client->stat.engineInterval = client->interval;
 	client->stat.captureDelay = 0.0;
