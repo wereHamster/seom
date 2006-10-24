@@ -13,7 +13,6 @@ LDFLAGS = -ldl -lpthread
 SRC = src/buffer.c         \
       src/client.c         \
       src/codec.c          \
-      src/config.c         \
       src/frame.c          \
       src/server.c         \
       src/stream.c         \
