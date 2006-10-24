@@ -340,6 +340,9 @@ int main(int argc, char *argv[])
 		XSync(dpy, False);
 
 		fprintf(stderr, "   position: %6llu/%llu   %5.2f%% \r", llu(fIndex + 1), llu(cFrameTotal), (float) 100 * fIndex / (cFrameTotal - 1));
+		
+		if (pause)
+			usleep(100000);
 
 		int skipFrames = pause ? 0 : 1;
 		while (XPending(dpy)) {
