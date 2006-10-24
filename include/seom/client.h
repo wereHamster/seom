@@ -8,16 +8,10 @@ typedef struct seomClient {
 	pthread_mutex_t mutex;
 	pthread_t thread;
 	
-	struct {
-		uint32_t size[2];
-	} src;
-	
-	struct {
-		uint32_t size[2];
-	} dst;
+	uint32_t size[2];
+	uint32_t scale;
 	
 	seomBuffer *buffer;
-	void (*copy)(seomFrame *dst, seomFrame *src, uint32_t w, uint32_t h);
 	
 	double interval;
 	
@@ -30,6 +24,13 @@ typedef struct seomClient {
 	
 	seomStream *stream;
 } seomClient;
+
+typedef struct seomClientConfig {
+	char *spec;
+	uint32_t size[2];
+	double fps;
+	uint8_t scale;
+} seomClientConfig;
 
 seomClient *seomClientCreate(char *spec, uint32_t width, uint32_t height, double fps);
 void seomClientCapture(seomClient *client, uint32_t xoffset, uint32_t yoffset);

@@ -1,10 +1,29 @@
 
 #include <seom/seom.h>
 
+void seomClientCopy(seomFrame *dst, seomFrame *src, uint32_t size[2], uint32_t scale)
+{
+	uint32_t w = size[0];
+	uint32_t h = size[1];
+	
+	if (scale == 0) {
+		seomFrameConvert(dst, src, w, h);
+		return;
+	}
+	
+	do {
+		seomFrameResample(src, w, h);
+		w >>= 1;
+		h >>= 1;
+	} while (--scale);
+	
+	seomFrameConvert(dst, src, w, h);
+}
+
 static void *seomClientThreadCallback(void *data)
 {
 	seomClient *client = data;
-	seomFrame *dst = seomFrameCreate('c', client->dst.size[0], client->dst.size[1]);
+	seomFrame *dst = seomFrameCreate('c', client->size[0] >> client->scale, client->size[1] >> client->scale);
 	
 	for (;;) {
 		uint64_t start = seomTime();
@@ -14,7 +33,7 @@ static void *seomClientThreadCallback(void *data)
 			break;
 		}
 		
-		client->copy(dst, src, client->src.size[0], client->src.size[1]);		
+		seomClientCopy(dst, src, client->size, client->scale);		
 		seomStreamPut(client->stream, dst);
 		
 		seomBufferTailAdvance(client->buffer);
@@ -33,18 +52,6 @@ static void *seomClientThreadCallback(void *data)
 	return NULL;
 }
 
-
-static void copyFrameFull(seomFrame *dst, seomFrame *src, uint32_t w, uint32_t h)
-{
-	seomFrameConvert(dst, src, w, h);
-}
-
-static void copyFrameHalf(seomFrame *dst, seomFrame *src, uint32_t w, uint32_t h)
-{
-	seomFrameResample(src, w, h);
-	seomFrameConvert(dst, src, w / 2, h / 2);
-}
-
 seomClient *seomClientCreate(char *spec, uint32_t width, uint32_t height, double fps)
 {
 	seomClient *client = malloc(sizeof(seomClient));
@@ -53,34 +60,19 @@ seomClient *seomClientCreate(char *spec, uint32_t width, uint32_t height, double
 		return NULL;
 	}
 	
-	client->src.size[0] = width;
-	client->src.size[1] = height;
+	client->scale = 0;
 	
-	if (0) {
-		client->copy = copyFrameHalf;
-		
-		client->src.size[0] &= (~3);
-		client->dst.size[0] = client->src.size[0] >> 1;
-		
-		client->src.size[1] &= (~3);
-		client->dst.size[1] = client->src.size[1] >> 1;
-	} else {
-		client->copy = copyFrameFull;
-		
-		client->src.size[0] &= (~1);
-		client->dst.size[0] = client->src.size[0];
-		
-		client->src.size[1] &= (~1);
-		client->dst.size[1] = client->src.size[1];
-	}
+	client->size[0] = width & ~(client->scale + 1);
+	client->size[1] = height & ~(client->scale + 1);
 	
-	client->stream = seomStreamCreate('o', spec, client->src.size);
+	uint32_t size[2] = { client->size[0] >> client->scale, client->size[1] >> client->scale };
+	client->stream = seomStreamCreate('o', spec, size);
 	if (client->stream == NULL) {
 		free(client);
 		return NULL;
 	}
 	
-	client->buffer = seomBufferCreate(sizeof(seomFrame) + client->src.size[0] * client->src.size[1] * 4, 16);	
+	client->buffer = seomBufferCreate(sizeof(seomFrame) + client->size[0] * client->size[1] * 4, 16);	
 
 	client->interval = 1000000.0 / (1.1 * fps);	
 	client->stat.captureInterval = client->interval;
@@ -155,7 +147,7 @@ void seomClientCapture(seomClient *client, uint32_t xoffset, uint32_t yoffset)
 			
 			frame->type = 'r';
 			frame->pts = timeCurrent;
-			capture(xoffset, yoffset, client->src.size[0], client->src.size[1], &frame->data[0]);
+			capture(xoffset, yoffset, client->size[0], client->size[1], &frame->data[0]);
 			
 			seomBufferHeadAdvance(client->buffer);
 
