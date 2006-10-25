@@ -157,9 +157,8 @@ static void createWindow(int width, int height)
 
 	swa.colormap = cmap;
 	swa.border_pixel = 0;
-	swa.event_mask = 0;
+	swa.event_mask = StructureNotifyMask | KeyPressMask | KeyReleaseMask | ExposureMask;
 	win = XCreateWindow(dpy, DefaultRootWindow(dpy), 0, 0, width, height, 0, vi->depth, InputOutput, vi->visual, CWBorderPixel | CWColormap | CWEventMask, &swa);
-	XSelectInput(dpy, win, StructureNotifyMask | KeyPressMask | KeyReleaseMask);
 	XMapWindow(dpy, win);
 	XIfEvent(dpy, &event, WaitFor__MapNotify, (char *)win);
 
@@ -340,15 +339,18 @@ int main(int argc, char *argv[])
 		XSync(dpy, False);
 
 		fprintf(stderr, "   position: %6llu/%llu   %5.2f%% \r", llu(fIndex + 1), llu(cFrameTotal), (float) 100 * fIndex / (cFrameTotal - 1));
-		
-		if (pause)
-			usleep(100000);
 
 		int skipFrames = pause ? 0 : 1;
-		while (XPending(dpy)) {
+		for (;;) {
 			XEvent e;
 			XClientMessageEvent event;
-			XNextEvent(dpy, &e);
+
+			if (XPending(dpy) || pause) {
+				XNextEvent(dpy, &e);
+			} else {
+				break;
+			}
+
 			long key;
 
 			switch (e.type) {
@@ -404,12 +406,14 @@ int main(int argc, char *argv[])
 
 				xOffset = (e.xconfigure.width - dWidth) / 2;
 				yOffset = (e.xconfigure.height - dHeight) / 2;
-				break;
+			case Expose:
+				goto display;
 			default:
 				break;
 			}
 		}
 
+display:
 		if (skipFrames < 0 && -skipFrames > (int)fIndex) {
 			fIndex = 0;
 		} else if (skipFrames > 0 && fIndex + skipFrames >= cFrameTotal) {
