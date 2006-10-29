@@ -345,7 +345,7 @@ int main(int argc, char *argv[])
 			XEvent e;
 			XClientMessageEvent event;
 
-			if (XPending(dpy) || pause) {
+			if (XPending(dpy) || (pause && skipFrames == 0)) {
 				XNextEvent(dpy, &e);
 			} else {
 				break;
