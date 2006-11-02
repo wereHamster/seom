@@ -3,12 +3,12 @@ PREFIX   = /usr
 DESTDIR  = $(PREFIX)
 LIBDIR   = lib
 
-CC       = gcc
+CC       ?= gcc
 LIBTOOL  = libtool
 INSTALL  = install
 
-CFLAGS  = -Iinclude -std=c99 -pipe -O3 -W -Wall
-LDFLAGS = -ldl -lpthread
+CFLAGS  += -Iinclude -std=c99 -W -Wall
+LDFLAGS += -ldl -lpthread
 
 SRC = src/buffer.c         \
       src/client.c         \
@@ -39,15 +39,15 @@ example: example.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -L.libs -lseom -lX11 -lGL -o example $<
 
 $(APPS): libseom.la
-	$(CC) $(CFLAGS) $(LDFLAGS) -L.libs -lseom $($@LIBS) -o seom-$@ src/$@/main.c
+	$(CC) $(CFLAGS) $(LDFLAGS) -L.libs -lseom $($@LIBS) -o $@ src/$@/main.c
 
 install: libseom.la $(APPS)
 	install -m 0755 -d $(DESTDIR)/include/seom $(DESTDIR)/$(LIBDIR) $(DESTDIR)/bin
 	install -m 0644 include/seom/* $(DESTDIR)/include/seom
 	$(LIBTOOL) --mode=install $(INSTALL) libseom.la $(DESTDIR)/$(LIBDIR)/libseom.la
-	install -m 0755 seom-filter $(DESTDIR)/bin/seom-filter
-	install -m 0755 seom-player $(DESTDIR)/bin/seom-player
-	install -m 0755 seom-server $(DESTDIR)/bin/seom-server
+	install -m 0755 filter $(DESTDIR)/bin/seom-filter
+	install -m 0755 player $(DESTDIR)/bin/seom-player
+	install -m 0755 server $(DESTDIR)/bin/seom-server
 
 clean:
-	rm -rf $(OBJS) .libs srd/.libs src/asm/.libs libseom.* seom-* example
+	rm -rf $(OBJS) .libs src/.libs src/asm/.libs libseom.* $(APPS) example
