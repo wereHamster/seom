@@ -7,7 +7,7 @@ CC       ?= gcc
 LIBTOOL  = libtool
 INSTALL  = install
 
-CFLAGS  += -Iinclude -std=c99 -W -Wall
+CFLAGS  += -Iinclude -std=c99 -O3 -W -Wall
 LDFLAGS += -ldl -lpthread
 
 SRC = src/buffer.c         \
