@@ -3,7 +3,7 @@ PREFIX   = /usr
 DESTDIR  = $(PREFIX)
 LIBDIR   = lib
 
-CC       ?= gcc
+CC       = gcc
 LIBTOOL  = libtool
 INSTALL  = install
 
