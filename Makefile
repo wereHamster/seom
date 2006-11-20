@@ -51,3 +51,5 @@ install: libseom.la $(APPS)
 
 clean:
 	rm -rf $(OBJS) .libs src/.libs src/asm/.libs libseom.* $(APPS) example
+	find src -name *.o -type f -delete
+
