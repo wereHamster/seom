@@ -5,7 +5,18 @@
 #define u16(ptr) ( *(uint16_t *) (ptr) )
 #define u32(ptr) ( *(uint32_t *) (ptr) )
 
-uint8_t *qlz_compress(const uint8_t *source, uint8_t *destination, uint32_t size)
+void __memcpy(uint8_t *dst, const uint8_t *src, uint32_t len)
+{
+	if (src + len > dst) {
+		uint8_t *end = dst + len;
+		while (dst < end)
+			*dst++ = *src++;
+	} else {
+		memcpy(dst, src, len);
+	}
+}
+
+uint8_t *qlz_compress(const uint8_t * source, uint8_t * destination, uint32_t size)
 {
 	const uint8_t *last_byte = source + size - 1;
 	const uint8_t *src = source;
@@ -17,7 +28,7 @@ uint8_t *qlz_compress(const uint8_t *source, uint8_t *destination, uint32_t size
 
 	/* save first byte uncompressed */
 	*dst++ = *src++;
-	
+
 	for (int i = 0; i < 4096; ++i)
 		hashtable[i] = src;
 
@@ -28,7 +39,7 @@ uint8_t *qlz_compress(const uint8_t *source, uint8_t *destination, uint32_t size
 			cword_ptr = dst;
 			dst += sizeof(uint32_t);
 		}
-		
+
 		if (u32(src) == u32(src + 1)) { /* RLE sequence */
 			uint32_t fetch = u32(src);
 			src += sizeof(uint32_t);
@@ -69,11 +80,11 @@ uint8_t *qlz_compress(const uint8_t *source, uint8_t *destination, uint32_t size
 					cword_val = (cword_val << 1) | 1;
 					uint32_t len = 0;
 
-					while (*(o + len + 4) == *(src + len + 4) && len < (1 << 11) - 1 && o + len + 4 < src)
+					while (*(o + len + 4) == *(src + len + 4) && len < (1 << 11) - 1)
 						++len;
 					src += len + 4;
 					if (len <= 7 && offset <= 1023) { /* 10bits offset, 3bits length */
-						*dst++ = (uint8_t) 0xa0 | (len << 2)| (offset >> 8);
+						*dst++ = (uint8_t) 0xa0 | (len << 2) | (offset >> 8);
 						*dst++ = (uint8_t) offset;
 					} else if (len <= 31 && offset <= 65535) { /* 16bits offset, 5bits length */
 						*dst++ = (uint8_t) 0xc0 | len;
@@ -86,7 +97,7 @@ uint8_t *qlz_compress(const uint8_t *source, uint8_t *destination, uint32_t size
 						*dst++ = (uint8_t) offset;
 					}
 				}
-			} else { /* literal */
+			} else {			/* literal */
 				*dst++ = *src++;
 				cword_val = (cword_val << 1);
 			}
@@ -149,30 +160,30 @@ uint8_t *qlz_decompress(const uint8_t *source, uint8_t *destination, uint32_t si
 				dst += 3;
 				src += 2;
 			} else if ((src[0] & 0x40) == 0) { /* 10bits offset, 3bits length */
-				uint32_t len = ((src[0] >> 2) & 7) + 4; 
+				uint32_t len = ((src[0] >> 2) & 7) + 4;
 				uint32_t offset = ((src[0] & 0x03) << 8) | src[1];
-				memcpy(dst, dst - offset, len);
+				__memcpy(dst, dst - offset, len);
 				dst += len;
 				src += 2;
 			} else if ((src[0] & 0x20) == 0) { /* 16bits offset, 5bits length */
 				uint32_t len = (src[0] & 0x1f) + 4;
 				uint32_t offset = (src[1] << 8) | src[2];
-				memcpy(dst, dst - offset, len);
+				__memcpy(dst, dst - offset, len);
 				dst += len;
 				src += 3;
 			} else if ((src[0] & 0x10) == 0) { /* 17bits offset, 11bits length */
 				uint32_t len = (((src[0] & 0x0f) << 7) | (src[1] >> 1)) + 4;
 				uint32_t offset = ((src[1] & 0x01) << 16) | (src[2] << 8) | (src[3]);
-				memcpy(dst, dst - offset, len);
+				__memcpy(dst, dst - offset, len);
 				dst += len;
 				src += 4;
 			} else { /* RLE sequence */
 				uint32_t len = ((src[0] & 0x0f) << 8) | src[1];
 				uint32_t val = src[2] | (src[2] << 8) | (src[2] << 16) | (src[2] << 24);
-				
+
 				u32(dst) = val;
 				dst += sizeof(uint32_t);
-				
+
 				uint8_t *end = dst + len * sizeof(uint32_t);
 				while (dst < end) {
 					u32(dst) = val;
