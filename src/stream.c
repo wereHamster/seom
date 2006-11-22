@@ -72,7 +72,7 @@ seomStream *seomStreamCreate(char type, char *spec, uint32_t size[2])
 	size[0] = stream->size[0] = ntohl(stream->size[0]);
 	size[1] = stream->size[1] = ntohl(stream->size[1]);
 	
-	stream->buffer = malloc(stream->size[0] * stream->size[1] * 4);
+	stream->buffer = malloc(stream->size[0] * stream->size[1] * 4 + 36000);
 	
 	return stream;
 }

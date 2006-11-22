@@ -1,22 +1,17 @@
 
 #include <seom/seom.h>
 
-void seomClientCopy(seomFrame *dst, seomFrame *src, uint32_t size[2], uint32_t scale)
+static void seomClientCopy(seomFrame *dst, seomFrame *src, uint32_t size[2], uint32_t scale)
 {
 	uint32_t w = size[0];
 	uint32_t h = size[1];
-	
-	if (scale == 0) {
-		seomFrameConvert(dst, src, w, h);
-		return;
-	}
-	
-	do {
+
+	while (scale--) {
 		seomFrameResample(src, w, h);
 		w >>= 1;
 		h >>= 1;
-	} while (--scale);
-	
+	};
+
 	seomFrameConvert(dst, src, w, h);
 }
 
@@ -33,7 +28,7 @@ static void *seomClientThreadCallback(void *data)
 			break;
 		}
 		
-		seomClientCopy(dst, src, client->size, client->scale);		
+		seomClientCopy(dst, src, client->size, client->scale);
 		seomStreamPut(client->stream, dst);
 		
 		seomBufferTailAdvance(client->buffer);
