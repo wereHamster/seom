@@ -5,26 +5,26 @@
 #define u16(ptr) ( *(uint16_t *) (ptr) )
 #define u32(ptr) ( *(uint32_t *) (ptr) )
 
-void __memcpy(uint8_t *dst, const uint8_t *src, uint32_t len)
+static void __memcpy(void *dst, const void *src, long len)
 {
 	if (src + len > dst) {
-		uint8_t *end = dst + len;
+		void *end = dst + len;
 		while (dst < end)
-			*dst++ = *src++;
+			*(char *)dst++ = *(char *)src++;
 	} else {
 		memcpy(dst, src, len);
 	}
 }
 
-uint8_t *qlz_compress(const uint8_t * source, uint8_t * destination, uint32_t size)
+uint8_t *qlz_compress(uint8_t *dst, const uint8_t *src, uint32_t size)
 {
-	const uint8_t *last_byte = source + size - 1;
-	const uint8_t *src = source;
-	const uint8_t **hashtable = (const uint8_t **)(destination + size + 36000 - sizeof(uint8_t *) * 4096);
-	uint8_t *cword_ptr = destination;
-	uint8_t *dst = destination + sizeof(uint32_t);
+	const uint8_t *last_byte = src + size - 1;
+	const uint8_t **hashtable = (const uint8_t **)(dst + size + 36000 - sizeof(uint8_t *) * 4096);
+	uint8_t *cword_ptr = dst;
 	uint32_t cword_val = 0;
 	uint32_t cword_counter = 31;
+	
+	dst += sizeof(uint32_t);
 
 	/* save first byte uncompressed */
 	*dst++ = *src++;
@@ -60,7 +60,7 @@ uint8_t *qlz_compress(const uint8_t * source, uint8_t * destination, uint32_t si
 
 			uint32_t offset = (uint32_t) (src - o);
 			if (offset <= 131071 && offset > 3 && ((ntohl(u32(o)) ^ ntohl(u32(src))) & 0xffffff00) == 0) {
-				if ((u32(o)) != (u32(src))) {
+				if (o[3] != src[3]) {
 					if (offset <= 127) { /* LZ match */
 						*dst++ = offset;
 						cword_val = (cword_val << 1) | 1;
@@ -78,7 +78,7 @@ uint8_t *qlz_compress(const uint8_t * source, uint8_t * destination, uint32_t si
 					cword_val = (cword_val << 1) | 1;
 					uint32_t len = 0;
 
-					while (*(o + len + 4) == *(src + len + 4) && len < (1 << 11) - 1)
+					while (*(o + len + 4) == *(src + len + 4) && len < (1 << 11) - 1 && src + len + 4 < last_byte - sizeof(uint32_t))
 						++len;
 					src += len + 4;
 					if (len <= 7 && offset <= 1023) { /* 10bits offset, 3bits length */
@@ -114,16 +114,14 @@ uint8_t *qlz_compress(const uint8_t * source, uint8_t * destination, uint32_t si
 		cword_val = (cword_val << 1);
 	}
 
-	cword_val = (cword_val << 1) |   1;
-	u32(cword_ptr) = htonl((cword_val << (cword_counter - 1)));
+	cword_val = (cword_val << cword_counter) | (1 << (cword_counter - 1));
+	u32(cword_ptr) = htonl(cword_val);
 	return (uint8_t *) dst;
 }
 
-uint8_t *qlz_decompress(const uint8_t *source, uint8_t *destination, uint32_t size)
+uint8_t *qlz_decompress(uint8_t *dst, const uint8_t *src, uint32_t size)
 {
-	const uint8_t *src = source;
-	uint8_t *dst = destination;
-	const uint8_t *last_byte = destination + size;
+	const uint8_t *last_byte = dst + size;
 	uint32_t cword_val = ntohl(u32(src));
 	uint32_t cword_counter = 0;
 	const uint8_t *guaranteed_uncompressed = last_byte - sizeof(uint32_t);
