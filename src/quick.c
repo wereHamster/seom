@@ -142,12 +142,12 @@ uint8_t *qlz_decompress(uint8_t *dst, const uint8_t *src, uint32_t size)
 			--cword_counter;
 			if ((src[0] & 0x80) == 0) { /* 7bits offset */
 				uint32_t offset = src[0];
-				u32(dst) = u32(dst - offset);
+				__memcpy(dst, dst - offset, 3);
 				dst += 3;
 				src += 1;
 			} else if ((src[0] & 0x60) == 0) { /* 13bits offset */
 				uint32_t offset = ((src[0] & 0x1f) << 8) | src[1];
-				u32(dst) = u32(dst - offset);
+				__memcpy(dst, dst - offset, 3);
 				dst += 3;
 				src += 2;
 			} else if ((src[0] & 0x40) == 0) { /* 10bits offset, 3bits length */
@@ -183,13 +183,13 @@ uint8_t *qlz_decompress(uint8_t *dst, const uint8_t *src, uint32_t size)
 				src += 3;
 			}
 		} else { /* literal */
-			const uint8_t map[8] = { 4, 3, 2, 2, 1, 1, 1, 1 };
-			const uint8_t *end = dst + map[cword_val >> 4];
+			uint8_t index  = cword_val >> 4;
+			const uint8_t map[8][2] = { { 4, 0x0f }, { 3, 0x07 }, { 2, 0x03 }, { 2, 0x03 }, { 1, 0x01 }, { 1, 0x01 }, { 1, 0x01 }, { 1, 0x01 } };
+			const uint8_t *end = dst + map[index][0];
 			while (dst < end)
 				*dst++ = *src++;
-			cword_counter -= map[cword_val >> 4];
-			
-			cword_val = (cword_val << (map[cword_val >> 4])) | (1 << (map[cword_val >> 4] - 1));
+			cword_counter -= map[index][0];
+			cword_val = (cword_val << map[index][0]) | map[index][1];
 
 			if (dst >= guaranteed_uncompressed) {
 				/* decode last literals and exit */
