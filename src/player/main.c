@@ -305,7 +305,7 @@ int main(int argc, char *argv[])
 		uint32_t cSize = *(uint32_t *) currentPosition;
 		currentPosition += sizeof(uint32_t);
 
-		seomCodecDecode(yuvImage, (uint32_t *) currentPosition, width, height);
+		seomCodecDecode(yuvImage, currentPosition, width * height * 3 / 2);
 		
 		uint8_t *dst = (uint8_t *) img->data + img->offsets[0] + img->pitches[0] * (height - 1);
 		uint8_t *src = yuvImage;

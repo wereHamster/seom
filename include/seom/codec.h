@@ -4,15 +4,7 @@
 
 #include <seom/seom.h>
 
-struct seomCodecTable {
-	uint32_t codes[256];
-	uint8_t *pointers[32];
-	uint8_t data[129 * 25];
-};
-
-extern struct seomCodecTable seomCodecTable;
-
-uint32_t *seomCodecEncode(uint32_t *dst, uint8_t *src, uint32_t width, uint32_t height);
-uint32_t *seomCodecDecode(uint8_t *dst, uint32_t *src, uint32_t width, uint32_t height);
+uint8_t *seomCodecEncode(uint8_t *dst, const uint8_t *src, uint32_t size);
+uint8_t *seomCodecDecode(uint8_t *dst, const uint8_t *src, uint32_t size);
 
 #endif /* __SEOM_CODEC_H__ */

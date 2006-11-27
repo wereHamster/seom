@@ -16,7 +16,6 @@ SRC = src/buffer.c         \
       src/frame.c          \
       src/server.c         \
       src/stream.c         \
-      src/quick.c          \
       src/asm/frame.c      \
 
 OBJS = $(SRC:%.c=%.lo)

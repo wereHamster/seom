@@ -102,6 +102,7 @@ int main(int argc, char *argv[])
 out:
 	writeFrame(1, frames[0], stream->size[0], stream->size[1]);
 	seomFrameDestroy(frames[0]);
+	seomStreamDestroy(stream);
 
 	return 0;
 }
