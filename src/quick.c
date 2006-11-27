@@ -20,26 +20,14 @@ uint8_t *qlz_compress(uint8_t *dst, const uint8_t *src, uint32_t size)
 {
 	const uint8_t *last_byte = src + size - 1;
 	const uint8_t **hashtable = (const uint8_t **)(dst + size + 36000 - sizeof(uint8_t *) * 4096);
-	uint8_t *cword_ptr = dst;
-	uint32_t cword_val = 0;
-	uint32_t cword_counter = 31;
-	
-	dst += sizeof(uint32_t);
-
-	/* save first byte uncompressed */
-	*dst++ = *src++;
+	uint8_t *cword_ptr = dst++;
+	uint8_t cword_val = 0;
+	uint8_t cword_counter = 8;
 
 	for (int i = 0; i < 4096; ++i)
 		hashtable[i] = src;
 
 	while (src < last_byte - sizeof(uint32_t)) {
-		if (--cword_counter == 0) { /* store control word */
-			u32(cword_ptr) = htonl((cword_val << 1) | 1);
-			cword_counter = 31;
-			cword_ptr = dst;
-			dst += sizeof(uint32_t);
-		}
-
 		if (u32(src) == u32(src + 1)) { /* RLE sequence */
 			uint32_t fetch = u32(src);
 			src += sizeof(uint32_t);
@@ -100,30 +88,38 @@ uint8_t *qlz_compress(uint8_t *dst, const uint8_t *src, uint32_t size)
 				cword_val = (cword_val << 1);
 			}
 		}
+		
+		--cword_counter;
+		if (cword_counter == 0) { /* store control word */
+			*cword_ptr = cword_val;
+			cword_counter = 8;
+			cword_ptr = dst++;
+		}
 	}
 
 	/* save last source bytes as literals */
 	while (src <= last_byte) {
-		if (--cword_counter == 0) {
-			u32(cword_ptr) = htonl((cword_val << 1) | 1);
-			cword_counter = 31;
-			cword_ptr = dst;
-			dst += sizeof(uint32_t);
-		}
 		*dst++ = *src++;
 		cword_val = (cword_val << 1);
+		--cword_counter;
+		if (cword_counter == 0) {
+			*cword_ptr = cword_val;
+			cword_counter = 8;
+			cword_ptr = dst++;
+		}
 	}
 
-	cword_val = (cword_val << cword_counter) | (1 << (cword_counter - 1));
-	u32(cword_ptr) = htonl(cword_val);
+	if (cword_counter > 0)
+		cword_val = (cword_val << cword_counter) | (1 << (cword_counter - 1));
+	*cword_ptr = cword_val;
 	return (uint8_t *) dst;
 }
 
 uint8_t *qlz_decompress(uint8_t *dst, const uint8_t *src, uint32_t size)
 {
 	const uint8_t *last_byte = dst + size;
-	uint32_t cword_val = ntohl(u32(src));
-	uint32_t cword_counter = 0;
+	uint8_t cword_val = *src++;
+	uint8_t cword_counter = 8;
 	const uint8_t *guaranteed_uncompressed = last_byte - sizeof(uint32_t);
 
 	/* prevent spurious memory read on a source with size < 4 */
@@ -135,16 +131,14 @@ uint8_t *qlz_decompress(uint8_t *dst, const uint8_t *src, uint32_t size)
 		return (uint8_t *) dst;
 	}
 
-
 	for (;;) {
 		if (cword_counter == 0) { /* fetch control word */
-			cword_val = ntohl(u32(src));
-			src += sizeof(uint32_t);
-			cword_counter = 31;
+			cword_val = *src++;
+			cword_counter = 8;
 		}
 
-		if (cword_val & (1 << 31)) { /* LZ match or RLE sequence */
-			cword_val = cword_val << 1;
+		if (cword_val & (1 << 7)) { /* LZ match or RLE sequence */
+			cword_val = (cword_val << 1) | 1;
 			--cword_counter;
 			if ((src[0] & 0x80) == 0) { /* 7bits offset */
 				uint32_t offset = src[0];
@@ -189,19 +183,20 @@ uint8_t *qlz_decompress(uint8_t *dst, const uint8_t *src, uint32_t size)
 				src += 3;
 			}
 		} else { /* literal */
-			const uint32_t map[16] = { 4, 3, 2, 2, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0 };
-			const uint8_t *end = dst + map[cword_val >> 28];
+			const uint8_t map[8] = { 4, 3, 2, 2, 1, 1, 1, 1 };
+			const uint8_t *end = dst + map[cword_val >> 4];
 			while (dst < end)
 				*dst++ = *src++;
-			cword_counter -= map[cword_val >> 28];
-			cword_val = cword_val << (map[cword_val >> 28]);
+			cword_counter -= map[cword_val >> 4];
+			
+			cword_val = (cword_val << (map[cword_val >> 4])) | (1 << (map[cword_val >> 4] - 1));
 
 			if (dst >= guaranteed_uncompressed) {
 				/* decode last literals and exit */
 				while (dst < last_byte) {
 					if (cword_counter == 0) {
-						src += sizeof(uint32_t);
-						cword_counter = 31;
+						++src;
+						cword_counter = 8;
 					}
 					*dst++ = *src++;
 					--cword_counter;
