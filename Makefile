@@ -11,7 +11,7 @@ INSTALL  = install
 
 ARCH     = C
 
-CFLAGS  += -Iinclude -std=c99 -g -W -Wall
+CFLAGS  += -Iinclude -std=c99 -O3 -W -Wall
 LDFLAGS += -ldl -lpthread
 
 SRC = src/buffer.c              \
