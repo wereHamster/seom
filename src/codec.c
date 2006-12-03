@@ -12,7 +12,7 @@
 static void __memcpy(void *dst, const void *src, long len)
 {
 	if (src + len > dst) {
-		void *end = dst + len;
+		const void *end = dst + len;
 		while (dst < end)
 			*(char *)dst++ = *(char *)src++;
 	} else {
@@ -32,7 +32,7 @@ uint8_t *seomCodecEncode(uint8_t *dst, const uint8_t *src, uint32_t size)
 		hashtable[i] = src;
 
 	while (src < end - sizeof(uint32_t)) {
-		if (u32(src) == u32(src + 1)) {	/* RLE sequence */
+		if (u32(src) == u32(src + 1)) { /* RLE sequence */
 			uint32_t fetch = u32(src);
 			src += sizeof(uint32_t);
 			const uint8_t *orig = src;
@@ -53,48 +53,48 @@ uint8_t *seomCodecEncode(uint8_t *dst, const uint8_t *src, uint32_t size)
 			uint32_t offset = (uint32_t) (src - o);
 			if (offset <= 131071 && offset > 3 && ((ntohl(u32(o)) ^ ntohl(u32(src))) & 0xffffff00) == 0) {
 				if (o[3] != src[3]) {
-					if (offset <= 127) {	/* LZ match */
+					if (offset <= 127) { /* LZ match */
 						*dst++ = offset;
 						cword_val = (cword_val << 1) | 1;
 						src += 3;
-					} else if (offset <= 8191) {	/* LZ match */
+					} else if (offset <= 8191) { /* LZ match */
 						*dst++ = (uint8_t) 0x80 | offset >> 8;
 						*dst++ = (uint8_t) offset;
 						cword_val = (cword_val << 1) | 1;
 						src += 3;
-					} else {	/* literal */
+					} else { /* literal */
 						*dst++ = *src++;
 						cword_val = (cword_val << 1);
 					}
-				} else {		/* LZ match */
+				} else { /* LZ match */
 					cword_val = (cword_val << 1) | 1;
 					uint32_t len = 0;
 
 					while (*(o + len + 4) == *(src + len + 4) && len < (1 << 11) - 1 && src + len + 4 < end - sizeof(uint32_t))
 						++len;
 					src += len + 4;
-					if (len <= 7 && offset <= 1023) {	/* 10bits offset, 3bits length */
+					if (len <= 7 && offset <= 1023) { /* 10bits offset, 3bits length */
 						*dst++ = (uint8_t) 0xa0 | (len << 2) | (offset >> 8);
 						*dst++ = (uint8_t) offset;
-					} else if (len <= 31 && offset <= 65535) {	/* 16bits offset, 5bits length */
+					} else if (len <= 31 && offset <= 65535) { /* 16bits offset, 5bits length */
 						*dst++ = (uint8_t) 0xc0 | len;
 						*dst++ = (uint8_t) (offset >> 8);
 						*dst++ = (uint8_t) offset;
-					} else {	/* 17bits offset, 11bits length */
+					} else { /* 17bits offset, 11bits length */
 						*dst++ = (uint8_t) 0xe0 | (len >> 7);
 						*dst++ = (uint8_t) (len << 1) | (offset >> 16);
 						*dst++ = (uint8_t) (offset >> 8);
 						*dst++ = (uint8_t) offset;
 					}
 				}
-			} else {			/* literal */
+			} else { /* literal */
 				*dst++ = *src++;
 				cword_val = (cword_val << 1);
 			}
 		}
 
 		--cword_counter;
-		if (cword_counter == 0) {	/* store control word */
+		if (cword_counter == 0) { /* store control word */
 			*cword_ptr = cword_val;
 			cword_counter = 8;
 			cword_ptr = dst++;
