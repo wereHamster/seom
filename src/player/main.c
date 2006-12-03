@@ -54,8 +54,6 @@ static int XVideoGetPort(Display * dpy)
 		return -1;
 	}
 
-	printf("%d adaptors\n", i_num_adaptors);
-
 	i_selected_port = -1;
 
 	for (i_adaptor = 0; i_adaptor < i_num_adaptors; ++i_adaptor) {
@@ -91,9 +89,6 @@ static int XVideoGetPort(Display * dpy)
 			if (i_selected_port == -1) {
 				continue;
 			}
-
-			/* If we found a port, print information about it */
-			fprintf(stderr, "adaptor %i, port %i, format 0x%x (%4.4s) %s\n", i_adaptor, i_selected_port, p_formats[i_format].id, (char *)&p_formats[i_format].id, (p_formats[i_format].format == XvPacked) ? "packed" : "planar");
 
 			/* Make sure XV_AUTOPAINT_COLORKEY is set */
 			p_attr = XvQueryPortAttributes(dpy, i_selected_port, &i_num_attributes);
@@ -218,23 +213,18 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "analysing video... %04.1f%% \r", (float)c / 10.0);
 	}
 
-	fprintf(stderr, "analysing video... done  \n");
-
 	if (cFrameTotal == 0) {
-		printf("empty video\n");
+		printf("Video seems to be empty. Sorry, can't replay it.\n");
 		exit(0);
 	}
 
 	float tt = (float) (time[1] - time[0]) / 1000000.0;
 	float fps = (float) cFrameTotal / tt;
 	float mbs = (float) statBuffer.st_size / 1024 / 1024 / tt;
-	printf("%llu frames, %.2f seconds, %.1f fps, %.1f MiB/s\n", llu(cFrameTotal), tt, fps, mbs);
-
-	uint64_t cTimeTotal = *(uint64_t *) (sourceData + statBuffer.st_size - (width * height * 3 / 2 + sizeof(uint64_t))) - *(uint64_t *) currentPosition;
-	printf("size: %u:%u, cFrameTotal: %llu, time: %llu\n", width, height, llu(cFrameTotal), llu(cTimeTotal / 1000000));
-
 	uint64_t rawFrames = (statBuffer.st_size - 2 * sizeof(uint32_t)) / (width * height * 3 / 2 + sizeof(uint64_t));
-	printf("ratio: %.3f\n", (float)rawFrames / cFrameTotal);
+	
+	printf("Video: %u:%u pixels, %llu frames, %.2f seconds, %.1f fps, %.1f MiB/s\n", width, height, llu(cFrameTotal), tt, fps, mbs);
+	printf("Compression: %.3f\n", (float)rawFrames / cFrameTotal);
 
 	yuvImage = malloc(width * height * 3 / 2);
 
