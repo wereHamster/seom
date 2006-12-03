@@ -1,7 +1,7 @@
 
-#include <X11/Xlib.h>
-
 #include <seom/seom.h>
+
+#include <GL/glx.h>
 
 static Bool waitMapNotify(Display *dpy, XEvent *e, char *arg)
 {
@@ -48,15 +48,18 @@ static Window glWindow(Display *dpy, int width, int height)
 
 int main(int argc, char *argv[])
 {
-	if (argc < 2) {
-		printf("Usage: %s [config namespace]\n", argv[0]);
-		argv[1] = "yukon";
-	}
-	
 	Display *dpy = XOpenDisplay(NULL);
 	Window win = glWindow(dpy, 400, 400);
 	
-	seomClient *client = seomClientCreate("file:///tmp/example.seom", 400, 400, 30.0);
+	seomClientConfig config;
+	
+	config.size[0] = 400;
+	config.size[1] = 400;
+	config.scale = 0;
+	config.fps = 30.0;
+	config.output = "file:///tmp/example.seom";
+	
+	seomClient *client = seomClientCreate(&config);
 	if (client == NULL) {
 		printf("couldn't create seomClient\n");
 		return 0; 
