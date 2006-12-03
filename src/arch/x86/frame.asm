@@ -119,7 +119,6 @@ __seomFrameConvert:
     imul    edx,4             ; edx = width in bytes
     imul    ecx,edx           ; ecx = size of buffer in bytes
     lea     ebx,[esi+ecx]     ; ebx = end of buffer
-    pxor    mm7,mm7
     lea     ecx,[esi+edx]     ; ecx = end of 1st row
 
 .L4:

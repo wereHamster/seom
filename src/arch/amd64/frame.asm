@@ -79,8 +79,6 @@ __seomFrameConvert:
     mov     r13,[rdi+16]       ; Y/U/V pointers
     mov     r12,[rdi+8]
     mov     rdi,[rdi]
-    
-    pxor    mm7,mm7
 
 .L4:
     lea     r9,[r8+r14]       ; r9 = 2nd src row
