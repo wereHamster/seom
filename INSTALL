@@ -7,3 +7,22 @@ I hope you have installed.
 
 Installing seom is then as easy as executing 'make' and then 'make install' as
 root.
+
+compiling 32bit seom under 64bit userspace
+==========================================
+
+Override CC and LIBDIR and you should be fine:
+
+$ make CC="gcc 32" LIBDIR=lib32
+
+
+platform specific optimizations
+===============================
+
+Use ARCH to specify your platform, the default is C (no optimization, plain C
+functions), also available are 'x64' and 'amd64'. The optimized functions are
+roughly twice as fast as their C counterparts so it's strongly advised that
+you use them. Example:
+
+$ make ARCH=amd64
+$ make ARCH=x86 CC="gcc -m32" LIBDIR=lib32
