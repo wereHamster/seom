@@ -15,109 +15,81 @@ static const int format = 0x30323449;
 
 static int XVideoGetPort(Display * dpy)
 {
-	XvAdaptorInfo *p_adaptor;
-	unsigned int i;
-	unsigned int i_adaptor, i_num_adaptors;
-	int i_selected_port;
+	XvAdaptorInfo *pAdaptor;
+	unsigned int i, numAdaptors;
+	int selectedPort = -1;
 
 	switch (XvQueryExtension(dpy, &i, &i, &i, &i, &i)) {
 	case Success:
 		break;
-
 	case XvBadExtension:
 		fprintf(stderr, "XvBadExtension");
 		return -1;
-
 	case XvBadAlloc:
 		fprintf(stderr, "XvBadAlloc");
 		return -1;
-
 	default:
 		fprintf(stderr, "XvQueryExtension failed");
 		return -1;
 	}
 
-	switch (XvQueryAdaptors(dpy, DefaultRootWindow(dpy), &i_num_adaptors, &p_adaptor)) {
+	switch (XvQueryAdaptors(dpy, DefaultRootWindow(dpy), &numAdaptors, &pAdaptor)) {
 	case Success:
 		break;
-
 	case XvBadExtension:
 		fprintf(stderr, "XvBadExtension for XvQueryAdaptors");
 		return -1;
-
 	case XvBadAlloc:
 		fprintf(stderr, "XvBadAlloc for XvQueryAdaptors");
 		return -1;
-
 	default:
 		fprintf(stderr, "XvQueryAdaptors failed");
 		return -1;
 	}
 
-	i_selected_port = -1;
-
-	for (i_adaptor = 0; i_adaptor < i_num_adaptors; ++i_adaptor) {
-		XvImageFormatValues *p_formats;
-		int i_format, i_num_formats;
-		int i_port;
-
-		/* If the adaptor doesn't have the required properties, skip it */
-		if (!(p_adaptor[i_adaptor].type & XvInputMask) || !(p_adaptor[i_adaptor].type & XvImageMask)) {
+	for (unsigned int i_adaptor = 0; i_adaptor < numAdaptors; ++i_adaptor) {
+		if (!(pAdaptor[i_adaptor].type & XvInputMask) || !(pAdaptor[i_adaptor].type & XvImageMask)) {
 			continue;
 		}
 
-		/* Check that adaptor supports our requested format... */
-		p_formats = XvListImageFormats(dpy, p_adaptor[i_adaptor].base_id, &i_num_formats);
+		int numFormats;
+		XvImageFormatValues *pFormats = XvListImageFormats(dpy, pAdaptor[i_adaptor].base_id, &numFormats);
 
-		for (i_format = 0; i_format < i_num_formats && (i_selected_port == -1); i_format++) {
-			XvAttribute *p_attr;
-			int i_attr, i_num_attributes;
-
-			if (p_formats[i_format].id != 0x30323449)
+		for (int i_format = 0; i_format < numFormats && (selectedPort == -1); i_format++) {
+			if (pFormats[i_format].id != 0x30323449)
 				continue;
-			/* Look for the first available port supporting this format */
-			for (i_port = p_adaptor[i_adaptor].base_id; (i_port < (int)(p_adaptor[i_adaptor].base_id + p_adaptor[i_adaptor].num_ports))
-				 && (i_selected_port == -1); i_port++) {
 
-				if (XvGrabPort(dpy, i_port, CurrentTime)
-					== Success) {
-					i_selected_port = i_port;
-				}
+			int portLast = pAdaptor[i_adaptor].base_id + pAdaptor[i_adaptor].num_ports;
+			for (int i_port = pAdaptor[i_adaptor].base_id; (i_port < portLast) && (selectedPort == -1); i_port++) {
+				if (XvGrabPort(dpy, i_port, CurrentTime) == Success)
+					selectedPort = i_port;
 			}
 
-			/* If no free port was found, forget it */
-			if (i_selected_port == -1) {
+			if (selectedPort == -1)
 				continue;
-			}
 
-			/* Make sure XV_AUTOPAINT_COLORKEY is set */
-			p_attr = XvQueryPortAttributes(dpy, i_selected_port, &i_num_attributes);
-
-			for (i_attr = 0; i_attr < i_num_attributes; i_attr++) {
-				if (!strcmp(p_attr[i_attr].name, "XV_AUTOPAINT_COLORKEY")) {
-					const Atom autopaint = XInternAtom(dpy,
-													   "XV_AUTOPAINT_COLORKEY", False);
-					XvSetPortAttribute(dpy, i_selected_port, autopaint, 1);
+			int numAttributes;
+			XvAttribute *pAttributes = XvQueryPortAttributes(dpy, selectedPort, &numAttributes);
+			for (int i_attr = 0; i_attr < numAttributes; i_attr++) {
+				if (!strcmp(pAttributes[i_attr].name, "XV_AUTOPAINT_COLORKEY")) {
+					const Atom autopaint = XInternAtom(dpy, "XV_AUTOPAINT_COLORKEY", False);
+					XvSetPortAttribute(dpy, selectedPort, autopaint, 1);
 					break;
 				}
 			}
 
-			if (p_attr != NULL) {
-				XFree(p_attr);
-			}
+			if (pAttributes != NULL)
+				XFree(pAttributes);
 		}
 
-		if (p_formats != NULL) {
-			XFree(p_formats);
-		}
-
+		if (pFormats != NULL)
+			XFree(pFormats);
 	}
 
-	if (i_num_adaptors > 0) {
-		XvFreeAdaptorInfo(p_adaptor);
-	}
+	if (numAdaptors > 0)
+		XvFreeAdaptorInfo(pAdaptor);
 
-	return i_selected_port;
+	return selectedPort;
 }
 
 static uint8_t *yuvImage;
