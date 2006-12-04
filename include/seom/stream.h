@@ -4,12 +4,6 @@
 
 #include <seom/seom.h>
 
-typedef struct seomStreamOps {
-	uint32_t (*put)(void *priv, void *data, uint32_t size);
-	uint64_t (*pos)(void *priv, uint64_t pos);
-	uint32_t (*get)(void *priv, void *data, uint32_t size);
-} seomStreamOps;
-
 typedef struct seomStream {
 	int fd;
 	
