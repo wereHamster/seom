@@ -27,7 +27,7 @@ OBJS = $(SRC:%.c=%.lo)
 APPS = filter player server
 filterLIBS =
 playerLIBS = -lX11 -lXv
-serverLIBS =
+serverLIBS = -lpthread
 
 .PHONY: all clean install
 all: libseom.la $(APPS)
