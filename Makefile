@@ -12,7 +12,7 @@ INSTALL  = install
 ARCH     = C
 
 CFLAGS  += -Iinclude -std=c99 -O3 -W -Wall
-LDFLAGS += 
+LDFLAGS += -Wl,--as-needed
 
 SRC = src/buffer.c              \
       src/client.c              \
@@ -45,7 +45,7 @@ example: example.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -L.libs -o $@ $< -lseom -lX11 -lGL
 
 $(APPS): libseom.la
-	$(CC) $(CFLAGS) -L.libs -o $@ src/$@/main.c -lseom $($@LIBS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -L.libs -o $@ src/$@/main.c -lseom $($@LIBS)
 
 install: libseom.la $(APPS)
 	install -m 0755 -d $(DESTDIR)/include/seom $(DESTDIR)/$(LIBDIR) $(DESTDIR)/bin
