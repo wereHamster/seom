@@ -34,7 +34,6 @@
 #include <X11/Xutil.h>
 #include <X11/keysym.h>
 
-#include <seom/config.h>
 #include <seom/buffer.h>
 #include <seom/frame.h>
 #include <seom/codec.h>
