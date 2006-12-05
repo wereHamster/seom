@@ -39,7 +39,7 @@ all: libseom.la $(APPS)
 	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(CFLAGS) -c -o $@ $<
 
 libseom.la: $(OBJS)
-	$(LIBTOOL) --tag=CC --mode=link $(CC) $(LDFLAGS) -o $@ $(OBJS) -ldl -lpthread
+	$(LIBTOOL) --tag=CC --mode=link $(CC) $(LDFLAGS) -rpath $(PREFIX)/$(LIBDIR) -o $@ $(OBJS) -ldl -lpthread
 
 example: example.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -L.libs -o $@ $< -lseom -lX11 -lGL
