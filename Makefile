@@ -12,7 +12,7 @@ INSTALL  = install
 ARCH     = C
 
 CFLAGS  += -Iinclude -std=c99 -O3 -W -Wall
-LDFLAGS += -ldl -lpthread
+LDFLAGS += 
 
 SRC = src/buffer.c              \
       src/client.c              \
@@ -39,13 +39,13 @@ all: libseom.la $(APPS)
 	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(CFLAGS) -c -o $@ $<
 
 libseom.la: $(OBJS)
-	$(LIBTOOL) --tag=CC --mode=link $(CC) $(LDFLAGS) -rpath $(PREFIX)/$(LIBDIR) -o $@ $(OBJS)
+	$(LIBTOOL) --tag=CC --mode=link $(CC) $(LDFLAGS) -o $@ $(OBJS) -ldl -lpthread
 
 example: example.c
-	$(CC) $(CFLAGS) $(LDFLAGS) -L.libs -lseom -lX11 -lGL -o example $<
+	$(CC) $(CFLAGS) $(LDFLAGS) -L.libs -o $@ $< -lseom -lX11 -lGL
 
 $(APPS): libseom.la
-	$(CC) $(CFLAGS) $(LDFLAGS) -L.libs -lseom $($@LIBS) -o $@ src/$@/main.c
+	$(CC) $(CFLAGS) -L.libs -o $@ src/$@/main.c -lseom $($@LIBS)
 
 install: libseom.la $(APPS)
 	install -m 0755 -d $(DESTDIR)/include/seom $(DESTDIR)/$(LIBDIR) $(DESTDIR)/bin
