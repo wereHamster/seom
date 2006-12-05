@@ -133,6 +133,15 @@ static void createWindow(int width, int height)
 	XIfEvent(dpy, &event, WaitFor__ConfigureNotify, (char *)win);
 }
 
+static const char *timeFormat(uint64_t time)
+{
+	static char buf[64];
+	time_t tim = (time_t) time / 1000000;
+	struct tm *tm = localtime(&tim);
+	snprintf(buf, 64, "%02d:%02d.%03d", tm->tm_min, tm->tm_sec, (int) (time / 1000) % 1000);
+	return buf;
+}
+
 static int xOffset;
 static int yOffset;
 
@@ -194,8 +203,8 @@ int main(int argc, char *argv[])
 	float fps = (float) cFrameTotal / tt;
 	float mbs = (float) statBuffer.st_size / 1024 / 1024 / tt;
 	uint64_t rawFrames = (statBuffer.st_size - 2 * sizeof(uint32_t)) / (width * height * 3 / 2 + sizeof(uint64_t));
-	
-	printf("Video: %u:%u pixels, %llu frames, %.2f seconds, %.1f fps, %.1f MiB/s\n", width, height, llu(cFrameTotal), tt, fps, mbs);
+
+	printf("Video: %u:%u pixels, %llu frames, %s seconds, %.1f fps, %.1f MiB/s\n", width, height, llu(cFrameTotal), timeFormat(time[1] - time[0]), fps, mbs);
 	printf("Compression: %.3f\n", (float)rawFrames / cFrameTotal);
 
 	yuvImage = malloc(width * height * 3 / 2);
@@ -300,7 +309,7 @@ int main(int argc, char *argv[])
 		XvShmPutImage(dpy, xvport, win, gc, img, 0, 0, width, height, xOffset, yOffset, dWidth, dHeight, False);
 		XSync(dpy, False);
 
-		fprintf(stderr, "   position: %6llu/%llu   %5.2f%% \r", llu(fIndex + 1), llu(cFrameTotal), (float) 100 * fIndex / (cFrameTotal - 1));
+		fprintf(stderr, "   %s  %5.2f%%  %6llu/%llu \r", timeFormat(pts - firstFrame), (float) 100 * fIndex / (cFrameTotal - 1), llu(fIndex + 1), llu(cFrameTotal));
 
 		int skipFrames = pause ? 0 : 1;
 		for (;;) {
