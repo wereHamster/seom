@@ -102,35 +102,37 @@ static Bool WaitFor__MapNotify(Display * dpy, XEvent * e, char *arg)
 	return dpy && (e->type == MapNotify) && (e->xmap.window == (Window) arg);
 }
 
-static Bool WaitFor__ConfigureNotify(Display * dpy, XEvent * e, char *arg)
-{
-	return dpy && (e->type == ConfigureNotify) && (e->xconfigure.window == (Window) arg);
-}
-
-static void createWindow(int width, int height)
+static void createWindow(uint32_t width, uint32_t height)
 {
 	dpy = XOpenDisplay(NULL);
 
 	XVisualInfo vit;
-	XVisualInfo *vi;
-	Colormap cmap;
 	XSetWindowAttributes swa;
 	XEvent event;
 	int num;
+	
+	Window root;
+	unsigned int rootWidth, rootHeight, uunused;
+	int sunused;
 
+	XGetGeometry(dpy, DefaultRootWindow(dpy), &root, &sunused, &sunused, &rootWidth, &rootHeight, &uunused, &uunused);
+
+	if (width >= rootWidth)
+		width = rootWidth - 128;
+	
+	if (height >= rootHeight)
+		height = rootHeight - 128;
+	
 	vit.visualid = XVisualIDFromVisual(DefaultVisual(dpy, DefaultScreen(dpy)));
-	vi = XGetVisualInfo(dpy, VisualIDMask, &vit, &num);
-	cmap = XCreateColormap(dpy, DefaultRootWindow(dpy), vi->visual, AllocNone);
+	XVisualInfo *vi = XGetVisualInfo(dpy, VisualIDMask, &vit, &num);
+	Colormap cmap = XCreateColormap(dpy, DefaultRootWindow(dpy), vi->visual, AllocNone);
 
 	swa.colormap = cmap;
 	swa.border_pixel = 0;
 	swa.event_mask = StructureNotifyMask | KeyPressMask | KeyReleaseMask | ExposureMask;
-	win = XCreateWindow(dpy, DefaultRootWindow(dpy), 0, 0, width, height, 0, vi->depth, InputOutput, vi->visual, CWBorderPixel | CWColormap | CWEventMask, &swa);
+	win = XCreateWindow(dpy, DefaultRootWindow(dpy), 64, 64, width, height, 0, vi->depth, InputOutput, vi->visual, CWBorderPixel | CWColormap | CWEventMask, &swa);
 	XMapWindow(dpy, win);
 	XIfEvent(dpy, &event, WaitFor__MapNotify, (char *)win);
-
-	XMoveWindow(dpy, win, 64, 64);
-	XIfEvent(dpy, &event, WaitFor__ConfigureNotify, (char *)win);
 }
 
 static const char *timeFormat(uint64_t time)
