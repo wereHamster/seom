@@ -6,9 +6,9 @@
 rm -Rf x264-build
 svn co svn://svn.videolan.org/x264/trunk x264-build
 pushd x264-build
-wget http://dbservice.com/ftpdir/tom/seom.patch
-patch -p0 < ./seom.patch
-./configure --enable-mp4-output --enable-pthread
+wget http://dbservice.com/ftpdir/tom/seom-x264.patch
+patch -p0 < ./seom-x264.patch
+./configure --enable-mp4-output
 make -j2
 popd
 
