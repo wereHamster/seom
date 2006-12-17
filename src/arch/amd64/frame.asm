@@ -190,3 +190,5 @@ __seomFrameConvert:
     pop     r12
     
     ret
+
+SECTION ".note.GNU-stack" noalloc noexec nowrite progbits

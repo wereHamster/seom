@@ -247,3 +247,5 @@ __seomFrameConvert:
     pop     edi
     
     ret
+
+SECTION ".note.GNU-stack" noalloc noexec nowrite progbits
