@@ -71,9 +71,9 @@ static int XVideoGetPort(Display * dpy)
 			int numAttributes;
 			XvAttribute *pAttributes = XvQueryPortAttributes(dpy, selectedPort, &numAttributes);
 			for (int i_attr = 0; i_attr < numAttributes; i_attr++) {
-				if (!strcmp(pAttributes[i_attr].name, "XV_AUTOPAINT_COLORKEY")) {
-					const Atom autopaint = XInternAtom(dpy, "XV_AUTOPAINT_COLORKEY", False);
-					XvSetPortAttribute(dpy, selectedPort, autopaint, 1);
+				if (strcmp(pAttributes[i_attr].name, "XV_SYNC_TO_VBLANK") == 0) {
+					const Atom sync = XInternAtom(dpy, "XV_SYNC_TO_VBLANK", False);
+					XvSetPortAttribute(dpy, selectedPort, sync, 1);
 					break;
 				}
 			}
