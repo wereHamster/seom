@@ -21,25 +21,25 @@ static void *seomClientThreadCallback(void *data)
 	seomFrame *dst = seomFrameCreate('c', client->size[0] >> client->scale, client->size[1] >> client->scale);
 	
 	for (;;) {
-		uint64_t start = seomTime();
 		seomFrame *src = seomBufferTail(client->buffer);
 		if (src->type == 0) {
 			seomBufferTailAdvance(client->buffer);
 			break;
 		}
-		
+
+		uint64_t start = seomTime();
 		seomClientCopy(dst, src, client->size, client->scale);
 		seomStreamPut(client->stream, dst);
-		
+		double tElapsed = (double) ( seomTime() - start );
+
 		seomBufferTailAdvance(client->buffer);
 		
-		double tElapsed = (double) ( seomTime() - start );
-		
+		const double eDecay = 1.0 / 60.0;
 		pthread_mutex_lock(&client->mutex);
 		double eInterval = client->stat.engineInterval;
-		double eDecay = 1.0 / 60.0;
 		client->stat.engineInterval = eInterval * ( 1.0 - eDecay ) + tElapsed * eDecay;
 		pthread_mutex_unlock(&client->mutex);
+		
 	}
 	
 	seomFrameDestroy(dst);
@@ -134,10 +134,9 @@ void seomClientCapture(seomClient *client, uint32_t xoffset, uint32_t yoffset)
 	}
 
 	uint64_t timeCurrent = seomTime();
-	uint64_t timeElapsed = timeCurrent - client->stat.lastCapture;
+	double tElapsed = (double) (timeCurrent - client->stat.lastCapture);
 	client->stat.lastCapture = timeCurrent;
-	
-	double tElapsed = (double) timeElapsed;
+
 	double tDelay = client->stat.captureDelay - tElapsed;
 
 	double delayMargin = client->stat.captureInterval / 10.0;
