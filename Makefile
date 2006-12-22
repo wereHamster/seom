@@ -1,6 +1,6 @@
 
 PREFIX   = /usr
-DESTDIR  = $(PREFIX)
+DESTDIR  = 
 LIBDIR   = lib
 
 RM       = rm
@@ -48,13 +48,14 @@ $(APPS): libseom.la
 	$(CC) $(CFLAGS) $(LDFLAGS) -L.libs -o $@ src/$@/main.c -lseom $($@LIBS)
 
 install: libseom.la $(APPS)
-	install -m 0755 -d $(DESTDIR)/include/seom $(DESTDIR)/$(LIBDIR) $(DESTDIR)/bin
-	install -m 0644 include/seom/* $(DESTDIR)/include/seom
-	$(LIBTOOL) --mode=install $(INSTALL) libseom.la $(DESTDIR)/$(LIBDIR)/libseom.la
-	install -m 0755 filter $(DESTDIR)/bin/seom-filter
-	install -m 0755 player $(DESTDIR)/bin/seom-player
-	install -m 0755 server $(DESTDIR)/bin/seom-server
+	install -m 0755 -d $(DESTDIR)/$(PREFIX)/include/seom $(DESTDIR)/$(PREFIX)/$(LIBDIR) $(DESTDIR)/$(PREFIX)/bin
+	install -m 0644 include/seom/* $(DESTDIR)/$(PREFIX)/include/seom
+	$(LIBTOOL) --mode=install $(INSTALL) libseom.la $(DESTDIR)/$(PREFIX)/$(LIBDIR)/libseom.la
+	install -m 0755 filter $(DESTDIR)/$(PREFIX)/bin/seom-filter
+	install -m 0755 player $(DESTDIR)/$(PREFIX)/bin/seom-player
+	install -m 0755 server $(DESTDIR)/$(PREFIX)/bin/seom-server
 
 clean:
 	$(LIBTOOL) --mode=clean $(RM) -f $(OBJS) libseom.la
+	$(RM) -f $(APPS)
 
