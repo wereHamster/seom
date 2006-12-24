@@ -22,7 +22,7 @@ static void *seomClientThreadCallback(void *data)
 	
 	for (;;) {
 		seomFrame *src = seomBufferTail(client->buffer);
-		if (src->type == 0) {
+		if (__builtin_expect(src->type == 0, 0)) {
 			seomBufferTailAdvance(client->buffer);
 			break;
 		}
@@ -50,7 +50,7 @@ static void *seomClientThreadCallback(void *data)
 seomClient *seomClientCreate(seomClientConfig *config)
 {
 	seomClient *client = malloc(sizeof(seomClient));
-	if (client == NULL) {
+	if (__builtin_expect(client == NULL, 0)) {
 		printf("seomClientStart(): out of memory\n");
 		return NULL;
 	}
@@ -67,7 +67,7 @@ seomClient *seomClientCreate(seomClientConfig *config)
 	}
 	
 	client->stream = seomStreamCreate('o', config->output, size);
-	if (client->stream == NULL) {
+	if (__builtin_expect(client->stream == NULL, 0)) {
 		free(client);
 		return NULL;
 	}
@@ -104,15 +104,15 @@ void seomClientDestroy(seomClient *client)
 	free(client);
 }
 
-static void capture(uint32_t x, uint32_t y, uint32_t w, uint32_t h, void *p)
+static inline void capture(uint32_t x, uint32_t y, uint32_t w, uint32_t h, void *p)
 {
 	static void (*glReadPixels)(GLint x, GLint y, GLsizei w, GLsizei h, GLenum f, GLenum t, GLvoid *p);
 	
-	if (glReadPixels == NULL) {
+	if (__builtin_expect(glReadPixels == NULL, 0)) {
 		glReadPixels = dlsym(RTLD_DEFAULT, "glReadPixels");
 	}
 	
-	if (glReadPixels) {
+	if (__builtin_expect(glReadPixels != NULL, 1)) {
 		(*glReadPixels)(x, y, w, h, GL_BGRA, GL_UNSIGNED_BYTE, p);
 	}
 }

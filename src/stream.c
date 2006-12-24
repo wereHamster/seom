@@ -4,6 +4,10 @@
 seomStream *seomStreamCreate(char type, char *spec, uint32_t size[2])
 {
 	seomStream *stream = malloc(sizeof(seomStream));
+
+	if (__builtin_expect(stream == NULL, 0))
+		return NULL;
+
 	stream->fd = -1;
 	
 	if (strncmp(spec, "file://", 7) == 0) {

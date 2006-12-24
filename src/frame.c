@@ -17,6 +17,9 @@ seomFrame *seomFrameCreate(uint8_t type, uint32_t width, uint32_t height)
 		return NULL;
 	}
 	
+	if (__builtin_expect(frame == NULL, 0))
+		return NULL;
+	
 	frame->type = type;
 	
 	return frame;

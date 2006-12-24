@@ -4,7 +4,7 @@
 seomBuffer *seomBufferCreate(uint64_t size, uint64_t count)
 {
 	seomBuffer *buffer = malloc(sizeof(seomBuffer) + count * (size + sizeof(void *)));
-	if (buffer == NULL) {
+	if (__builtin_expect(buffer == NULL, 0)) {
 		return NULL;
 	}
 
