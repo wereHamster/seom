@@ -1,0 +1,9 @@
+#!/bin/sh
+
+cat > seom.pc << EOF
+Name: seom
+Description: seom video capturing library
+Version: 1.0-${3}
+Libs: -L${1}/${2} -lseom
+Cflags: -I${1}/include
+EOF

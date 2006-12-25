@@ -45,8 +45,12 @@ example: example.c
 $(APPS): libseom.la
 	$(CC) $(CFLAGS) $(LDFLAGS) -L.libs -o $@ src/$@/main.c -lseom $($@LIBS)
 
-install: libseom.la $(APPS)
+seom.pc: seom.pc.in
+	./seom.pc.in $(PREFIX) $(LIBDIR) `svn info | grep Revision | sed 's#Revision: ##'`
+
+install: seom.pc libseom.la $(APPS)
 	install -m 0755 -d $(DESTDIR)/$(PREFIX)/include/seom $(DESTDIR)/$(PREFIX)/$(LIBDIR) $(DESTDIR)/$(PREFIX)/bin
+	install -m 0644 seom.pc /usr/lib/pkgconfig
 	install -m 0644 include/seom/* $(DESTDIR)/$(PREFIX)/include/seom
 	$(LIBTOOL) --mode=install $(INSTALL) libseom.la $(DESTDIR)/$(PREFIX)/$(LIBDIR)/libseom.la
 	install -m 0755 filter $(DESTDIR)/$(PREFIX)/bin/seom-filter
