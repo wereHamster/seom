@@ -59,5 +59,5 @@ install: seom.pc libseom.la $(APPS)
 
 clean:
 	$(LIBTOOL) --mode=clean $(RM) -f $(OBJS) libseom.la
-	$(RM) -f $(APPS)
+	$(RM) -f $(APPS) seom.pc.in
 
