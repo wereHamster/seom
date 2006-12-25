@@ -1,19 +1,25 @@
 #!/bin/sh
 
-XOPTS=""
-MOPTS="-ovc lavc -lavcopts vstrict=-1:vcodec=ffv1"
+FPS=""
+OPT=""
 
-if [ -e "$HOME/.seom/backup" ]; then
-	source "$HOME/.seom/backup"
+if ! which seom-x264 &> /dev/null; then
+	echo "You need to install seom-x264"
+	exit -1
 fi
 
-if [ ${#} -ne 2 ]; then\
+if [ ${#} -ne 2 ]; then
 	echo "Usage: $ ${0} [src dir] [dst dir]"
 	exit 1;
 fi
 
 if [ ! -d ${1} -o ! -d ${2} ]; then
+	echo "Source or destination directories don't exist"
 	exit 1
+fi
+
+if [ -e "$HOME/.seom/backup" ]; then
+	source "$HOME/.seom/backup"
 fi
 
 files=$(ls ${1}/*.seom 2> /dev/null)
@@ -23,12 +29,10 @@ for src in ${files}; do
 	
 	echo -n "Processing '${src}' "
 
-	if which seom-x264 &> /dev/null; then
+	if [ "${FPS}" = "" ]; then
 		seom-x264 -o "${dst}.mp4" ${XOPTS} ${src} &> /dev/null
-	elif which mencoder &> /dev/null; then
-		seom-filter ${src} | mencoder - -o "${dst}.avi" ${MOPTS} &> /dev/null
 	else
-		cp ${src} "${dst}.seom" &> /dev/null
+		seom-filter ${src} -r ${FPS} | seom-x264 -o "${dst}.mp4" stdin.y4m &> /dev/null
 	fi
 
 	if [ ${?} -eq 0 ]; then
