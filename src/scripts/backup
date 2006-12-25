@@ -30,9 +30,9 @@ for src in ${files}; do
 	echo -n "Processing '${src}' "
 
 	if [ "${FPS}" = "" ]; then
-		seom-x264 -o "${dst}.mp4" ${XOPTS} ${src} &> /dev/null
+		seom-x264 -o "${dst}.mp4" ${OPT} ${src} &> /dev/null
 	else
-		seom-filter ${src} -r ${FPS} | seom-x264 -o "${dst}.mp4" stdin.y4m &> /dev/null
+		seom-filter ${src} -r ${FPS} | seom-x264 -o "${dst}.mp4" ${OPT} stdin.y4m &> /dev/null
 	fi
 
 	if [ ${?} -eq 0 ]; then
