@@ -1,5 +1,6 @@
 #!/bin/sh
 
+XOPTS=""
 MOPTS="-ovc lavc -lavcopts vstrict=-1:vcodec=ffv1"
 
 if [ -e "$HOME/.seom/backup" ]; then
@@ -23,7 +24,7 @@ for src in ${files}; do
 	echo -n "Processing '${src}' "
 
 	if which seom-x264 &> /dev/null; then
-		seom-x264 -o "${dst}.mp4" --qp 0 ${src} &> /dev/null
+		seom-x264 -o "${dst}.mp4" --qp ${XOPTS} ${src} &> /dev/null
 	elif which mencoder &> /dev/null; then
 		seom-filter ${src} | mencoder - -o "${dst}.avi" ${MOPTS} &> /dev/null
 	else
