@@ -1,0 +1,39 @@
+#!/bin/sh
+
+MOPTS="-ovc lavc -lavcopts vstrict=-1:vcodec=ffv1"
+
+if [ -e "$HOME/.seom/backup" ]; then
+	source "$HOME/.seom/backup"
+fi
+
+if [ ${#} -ne 2 ]; then\
+	echo "Usage: $ ${0} [src dir] [dst dir]"
+	exit 1;
+fi
+
+if [ ! -d ${1} -o ! -d ${2} ]; then
+	exit 1
+fi
+
+files=$(ls ${1}/*.seom 2> /dev/null)
+for src in ${files}; do
+	tmp=${src##*/}
+	dst="${2}/${tmp%%.seom}--$(stat -c %y ${src} | sed 's#\..*##' | sed 's# #--#')"
+	
+	echo -n "Processing '${src}' "
+
+	if which seom-x264 &> /dev/null; then
+		seom-x264 -o "${dst}.mp4" --qp 0 ${src} &> /dev/null
+	elif which mencoder &> /dev/null; then
+		seom-filter ${src} | mencoder - -o "${dst}.avi" ${MOPTS} &> /dev/null
+	else
+		cp ${src} "${dst}.seom" &> /dev/null
+	fi
+
+	if [ ${?} -eq 0 ]; then
+		rm ${src}
+		echo "..."
+	else
+		echo "... failed"
+	fi
+done

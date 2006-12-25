@@ -50,12 +50,16 @@ seom.pc: seom.pc.in
 
 install: seom.pc libseom.la $(APPS)
 	install -m 0755 -d $(DESTDIR)/$(PREFIX)/include/seom $(DESTDIR)/$(PREFIX)/$(LIBDIR) $(DESTDIR)/$(PREFIX)/bin
+
 	install -m 0644 seom.pc /usr/lib/pkgconfig
 	install -m 0644 include/seom/* $(DESTDIR)/$(PREFIX)/include/seom
 	$(LIBTOOL) --mode=install $(INSTALL) libseom.la $(DESTDIR)/$(PREFIX)/$(LIBDIR)/libseom.la
+
 	install -m 0755 filter $(DESTDIR)/$(PREFIX)/bin/seom-filter
 	install -m 0755 player $(DESTDIR)/$(PREFIX)/bin/seom-player
 	install -m 0755 server $(DESTDIR)/$(PREFIX)/bin/seom-server
+
+	install -m 0755 src/scripts/backup $(DESTDIR)/$(PREFIX)/bin/seom-backup
 
 clean:
 	$(LIBTOOL) --mode=clean $(RM) -f $(OBJS) libseom.la
