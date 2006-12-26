@@ -51,7 +51,7 @@ seom.pc: seom.pc.in
 install: seom.pc libseom.la $(APPS)
 	install -m 0755 -d $(DESTDIR)/$(PREFIX)/include/seom $(DESTDIR)/$(PREFIX)/$(LIBDIR) $(DESTDIR)/$(PREFIX)/bin
 
-	install -m 0644 seom.pc /usr/lib/pkgconfig
+	install -m 0644 seom.pc $(DESTDIR)/$(PREFIX)/$(LIBDIR)/pkgconfig
 	install -m 0644 include/seom/* $(DESTDIR)/$(PREFIX)/include/seom
 	$(LIBTOOL) --mode=install $(INSTALL) libseom.la $(DESTDIR)/$(PREFIX)/$(LIBDIR)/libseom.la
 
