@@ -11,7 +11,6 @@ seomStream *seomStreamCreate(char type, char *spec, uint32_t size[2])
 	stream->fd = -1;
 	
 	if (strncmp(spec, "file://", 7) == 0) {
-		fprintf(stderr, "file:// path: %s\n", &spec[7]);
 		if (type == 'o') {
 			stream->fd = open(&spec[7], O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
 		} else if (type == 'i') {
@@ -45,8 +44,6 @@ seomStream *seomStreamCreate(char type, char *spec, uint32_t size[2])
 		
 		stream->fd = socket(AF_INET, SOCK_STREAM, 0);
 		connect(stream->fd, &addr, sizeof(addr));
-		
-		fprintf(stderr, "ipv4:// output: %s\n", &spec[7]);
 	} else if (strncmp(spec, "ipv6://", 7) == 0) {
 		fprintf(stderr, "IPv6 unsupported !\n");
 	} else {
