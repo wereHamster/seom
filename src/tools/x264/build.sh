@@ -12,6 +12,5 @@ patch -p0 < ./seom-x264.patch
 make -j2
 popd
 
-rm -f seom-x264
 cp x264-build/x264 seom-x264
 rm -Rf x264-build
