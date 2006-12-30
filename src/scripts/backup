@@ -27,6 +27,10 @@ for src in ${files}; do
 	tmp=${src##*/}
 	dst="${2}/${tmp%%.seom}--$(stat -c %y ${src} | sed 's#\..*##' | sed 's# #--#')"
 	
+	tmp="$(mktemp -p ${1} seom-backup-XXXXXX).seom"
+	mv -f ${src} ${tmp} # FIXME: don't overwrite existing files
+	src=${tmp}
+	
 	echo -n "Processing '${src}' "
 
 	if [ "${FPS}" = "" ]; then
