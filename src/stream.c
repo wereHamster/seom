@@ -103,7 +103,7 @@ seomFrame *seomStreamGet(seomStream *stream)
 		return NULL;
 	}
 	
-	seomFrame *frame = seomFrameCreate('c', stream->size[0], stream->size[1]);
+	seomFrame *frame = seomFrameCreate('c', stream->size);
 	frame->pts = pts;
 	
 	uint32_t len;

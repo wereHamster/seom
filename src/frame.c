@@ -1,45 +1,37 @@
 
 #include <seom/seom.h>
 
-void __seomFrameResample(uint32_t *buf, uint32_t w, uint32_t h);
-void __seomFrameConvert(uint8_t *dst[3], uint32_t *src, uint32_t w, uint32_t h);
+void __seomFrameResample(void *buf, uint32_t w, uint32_t h);
+void __seomFrameConvert(void *dst[3], void *src, uint32_t w, uint32_t h);
 
-seomFrame *seomFrameCreate(uint8_t type, uint32_t width, uint32_t height)
+seomFrame *seomFrameCreate(uint8_t type, uint32_t size[2])
 {
-	seomFrame *frame;
+	seomFrame *frame = NULL;
 	
 	if (type == 'r') {
-		frame = malloc(sizeof(seomFrame) + width * height * 4);
+		frame = malloc(sizeof(seomFrame) + size[0] * size[1] * 4);
 	} else if (type == 'c') {
-		frame = malloc(sizeof(seomFrame) + width * height * 3 / 2);
-	} else {
-		fprintf(stderr, "Unknown type: %c\n", type);
-		return NULL;
+		frame = malloc(sizeof(seomFrame) + size[0] * size[1] * 3 / 2);
 	}
-	
-	if (__builtin_expect(frame == NULL, 0))
-		return NULL;
-	
-	frame->type = type;
 	
 	return frame;
 }
 
-void seomFrameResample(seomFrame *frame, uint32_t width, uint32_t height)
+void seomFrameResample(seomFrame *frame, uint32_t size[2])
 {
-	__seomFrameResample((uint32_t *) &frame->data[0], width, height);
+	__seomFrameResample((void *) &frame->data[0], size[0], size[1]);
 }
 
-void seomFrameConvert(seomFrame *dst, seomFrame *src, uint32_t width, uint32_t height)
+void seomFrameConvert(seomFrame *dst, seomFrame *src, uint32_t size[2])
 {
-	uint8_t *yuv[3];
-	yuv[0] = (uint8_t *) &dst->data[0];
-	yuv[1] = yuv[0] + width * height;
-	yuv[2] = yuv[1] + width * height / 4;
+	void *yuv[3];
+	yuv[0] = (void *) &dst->data[0];
+	yuv[1] = yuv[0] + size[0] * size[1];
+	yuv[2] = yuv[1] + size[0] * size[1] / 4;
 	
 	dst->pts = src->pts;
 	
-	__seomFrameConvert(yuv, (uint32_t *) &src->data[0], width, height);
+	__seomFrameConvert(yuv, (void *) &src->data[0], size[0], size[1]);	
 }
 
 void seomFrameDestroy(seomFrame *frame)
