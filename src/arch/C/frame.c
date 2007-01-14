@@ -16,9 +16,10 @@ static const uint16_t m[3][3] = {
 
 void __seomFrameResample(uint32_t *buf, uint32_t w, uint32_t h)
 {
+	uint8_t *in8 = (uint8_t *) buf;
 	for (uint32_t y = 0; y < h; y += 2) {
 		for (uint32_t x = 0; x < w; x += 2) {
-			#define c(xo,yo,s) ( buf[(y+yo)*w+(x+xo)]>>((s)*8) )
+			#define c(xo,yo,s) ( in8[(y+yo)*(w*4)+(x+xo)*4+s] )
 			uint8_t p[2][2][3] = {
 				{ { c(0,0,0), c(0,0,1), c(0,0,2) }, { c(1,0,0), c(1,0,1), c(1,0,2) } },
 				{ { c(0,1,0), c(0,1,1), c(0,1,2) }, { c(1,1,0), c(1,1,1), c(1,1,2) } },
@@ -31,7 +32,10 @@ void __seomFrameResample(uint32_t *buf, uint32_t w, uint32_t h)
 				( p[0][0][2] + p[1][0][2] + p[0][1][2] + p[1][1][2] ) / 4,
 			};
 			
-			buf[( y / 2 ) * ( w / 2) + ( x / 2 )] = r[0] | r[1] << 8 | r[2] << 16;
+			uint8_t *tmp = (uint8_t *) (buf + ( y / 2 ) * ( w / 2) + ( x / 2 ));
+			*(uint8_t *) (tmp + 0) = r[0];
+			*(uint8_t *) (tmp + 1) = r[1];
+			*(uint8_t *) (tmp + 2) = r[2];
 		}
 	}
 }
