@@ -33,7 +33,7 @@ void __seomFrameResample(void *buf, uint32_t w, uint32_t h)
 				( p[0][0][2] + p[1][0][2] + p[0][1][2] + p[1][1][2] ) / 4,
 			};
 			
-			void *tmp = buf + ( y / 2 ) * ( w / 2) + ( x / 2 );
+			void *tmp = buf + ( y / 2 ) * ( w / 2) * 4 + ( x / 2 ) * 4;
 			byte(tmp + 0) = r[0];
 			byte(tmp + 1) = r[1];
 			byte(tmp + 2) = r[2];
