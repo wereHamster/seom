@@ -20,7 +20,7 @@ platform specific optimizations
 ===============================
 
 Use --arch=??? to specify your platform, the default is C (no optimization,
-plain C functions), also available are 'x64' and 'amd64'. The optimized
+plain C functions), also available are 'x86' and 'amd64'. The optimized
 functions are roughly twice as fast as their C counterparts so it's strongly
 advised that you use them. Example:
 
