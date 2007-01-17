@@ -1,0 +1,15 @@
+#!/bin/sh
+
+PREFIX="/usr"
+ARCH="C"
+
+for opt do
+	case "$opt" in
+		--prefix=*) PREFIX="${opt#*=}" ;;
+		--arch=*) ARCH="${opt#*=}" ;;
+	esac
+done
+
+rm -f config.make
+echo "PREFIX   = ${PREFIX}" >> config.make
+echo "ARCH     = ${ARCH}" >> config.make 

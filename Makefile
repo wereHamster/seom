@@ -1,5 +1,5 @@
 
-PREFIX   = /usr
+PREFIX   = /usr/local
 DESTDIR  = 
 LIBDIR   = lib
 
@@ -13,6 +13,8 @@ ARCH     = C
 
 CFLAGS  += -Iinclude -std=c99 -O3 -W -Wall
 LDFLAGS += -Wl,--as-needed
+
+include config.make
 
 SRC = src/buffer.c              \
       src/client.c              \
@@ -68,4 +70,3 @@ install: seom.pc libseom.la $(APPS)
 clean:
 	$(LIBTOOL) --mode=clean $(RM) -f $(OBJS) libseom.la
 	$(RM) -f $(APPS) seom.pc
-
