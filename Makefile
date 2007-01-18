@@ -1,5 +1,6 @@
 
 DESTDIR  = 
+LIBDIR   = lib
 
 RM       = rm
 CC       = gcc

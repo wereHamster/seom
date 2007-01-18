@@ -12,27 +12,11 @@ Installing seom is then as easy as executing './configure', 'make' and then
 ./configure options
 ===================
 
-When executing ./configure, set PREFIX, ARCH or LIBDIR environment variables
-to override the default values.
-
-$ PREFIX=/usr ARCH=amd64 ./configure
+So far, only --prefix=?? is supported.
 
 
 compiling 32bit seom under 64bit userspace
 ==========================================
 
-Override CC and LIBDIR and you should be fine:
-
+$ setarch i686 ./configure --prefix=/usr
 $ make CC="gcc 32" LIBDIR=lib32
-
-
-platform specific optimizations
-===============================
-
-Use ARCH=??? to specify your platform, the default is C (no optimization,
-plain C functions), also available are 'x86' and 'amd64'. The optimized
-functions are roughly twice as fast as their C counterparts so it's strongly
-advised that you use them. Example:
-
-$ ARCH=x86 LIBDIR=lib32 ./configure
-$ make CC="gcc -m32"

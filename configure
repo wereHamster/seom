@@ -1,10 +1,20 @@
 #!/bin/sh
 
-rm -f config.make
+# default values
+PREFIX="/usr/local"
+ARCH="C"
 
-echo "" >> config.make
-echo "PREFIX   = ${PREFIX:-/usr/local}" >> config.make
-echo "LIBDIR   = ${LIBDIR:-lib}" >> config.make
-echo "" >> config.make
-echo "ARCH     = ${ARCH:-C}" >> config.make 
-echo "" >> config.make
+case $(uname -m) in
+	i*86) ARCH="x86" ;;
+	x86_64) ARCH="amd64" ;;
+esac
+
+for opt do
+	case "$opt" in
+		--prefix=*) PREFIX="${opt#*=}"
+	esac
+done
+
+rm -f config.make
+echo "PREFIX   = ${PREFIX}" >> config.make
+echo "ARCH     = ${ARCH}" >> config.make 
