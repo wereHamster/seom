@@ -45,7 +45,7 @@ $(APPS): libseom.la
 	$(CC) $(CFLAGS) $(LDFLAGS) -L.libs -o $@ src/$@/main.c -lseom $($@LIBS)
 
 seom.pc: seom.pc.in
-	./seom.pc.in $(PREFIX) $(LIBDIR) `svn info | grep Revision | sed 's#Revision: ##'`
+	./seom.pc.in $(PREFIX) $(LIBDIR)
 
 install: seom.pc libseom.la $(APPS)
 	install -m 0755 -d $(DESTDIR)/$(PREFIX)/$(LIBDIR)/pkgconfig

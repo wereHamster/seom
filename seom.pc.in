@@ -1,9 +1,17 @@
 #!/bin/sh
 
+if [ which svn &>/dev/null ] && [ svn info &>/dev/null ]; then
+	VERSION="1.0-$(svn info | grep Revision | sed 's#Revision: ##')"
+elif [ -e VERSION ]; then
+	VERSION=$(cat VERSION 2>/dev/null)
+else
+	return
+fi
+
 cat > seom.pc << EOF
 Name: seom
 Description: seom video capturing library
-Version: 1.0-${3}
+Version: ${VERSION}
 Libs: -L${1}/${2} -lseom
 Cflags: -I${1}/include
 EOF
