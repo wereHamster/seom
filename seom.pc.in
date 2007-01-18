@@ -5,7 +5,7 @@ if [ which svn &>/dev/null ] && [ svn info &>/dev/null ]; then
 elif [ -e VERSION ]; then
 	VERSION=$(cat VERSION 2>/dev/null)
 else
-	return
+	exit
 fi
 
 cat > seom.pc << EOF
