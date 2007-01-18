@@ -18,3 +18,6 @@ done
 rm -f config.make
 echo "PREFIX   = ${PREFIX}" >> config.make
 echo "ARCH     = ${ARCH}" >> config.make 
+
+echo "prefix:   ${PREFIX}"
+echo "arch:     ${ARCH}"
