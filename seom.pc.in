@@ -1,6 +1,6 @@
 #!/bin/sh
 
-if [ which svn &>/dev/null ] && [ svn info &>/dev/null ]; then
+if which svn &>/dev/null && svn info &>/dev/null; then
 	VERSION="1.0-$(svn info | grep Revision | sed 's#Revision: ##')"
 elif [ -e VERSION ]; then
 	VERSION=$(cat VERSION 2>/dev/null)
