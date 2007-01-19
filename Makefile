@@ -51,6 +51,9 @@ install: seom.pc libseom.la $(APPS)
 	install -m 0755 -d $(DESTDIR)/$(PREFIX)/$(LIBDIR)/pkgconfig
 	install -m 0644 seom.pc $(DESTDIR)/$(PREFIX)/$(LIBDIR)/pkgconfig
 
+	install -m 0755 -d $(DESTDIR)/$(PREFIX)/share/seom
+	install -m 0644 art/seom.svg $(DESTDIR)/$(PREFIX)/share/seom
+
 	install -m 0755 -d $(DESTDIR)/$(PREFIX)/include/seom
 	install -m 0644 include/seom/* $(DESTDIR)/$(PREFIX)/include/seom
 
