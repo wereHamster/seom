@@ -132,13 +132,13 @@ __seomFrameConvert:
 ; mm0, working copy
  
     pxor      mm7,mm7
-    movq      mm1,[esi]
+    movd      mm1,[esi]
     punpcklbw mm1,mm7
-    movq      mm2,[esi+4]
+    movd      mm2,[esi+4]
     punpcklbw mm2,mm7
-    movq      mm3,[ebp]
+    movd      mm3,[ebp]
     punpcklbw mm3,mm7  
-    movq      mm4,[ebp+4]
+    movd      mm4,[ebp+4]
     punpcklbw mm4,mm7  
     movq      mm5,mm1
     paddw     mm5,mm2
