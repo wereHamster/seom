@@ -1,12 +1,6 @@
 
 BITS 32
 
-SECTION .rodata
-ALIGN 16
-yMul: dw    25,      129,        66,      0
-uMul: dw   112,      -74,       -38,      0
-vMul: dw   -18,      -94,       112,      0
-
 SECTION .text
 
 ; [esp+ 4] : buf
@@ -94,10 +88,25 @@ __seomFrameConvert:
     push    ebx
     push    ebp
 
-    mov     edi, [esp+ps+ 4]
-    mov     esi, [esp+ps+ 8]
-    mov     edx, [esp+ps+12]
-    mov     ecx, [esp+ps+16]
+    call   .L1
+    dw    25,      129,        66,      0
+    dw   112,      -74,       -38,      0
+    dw   -18,      -94,       112,      0
+.L1:
+    pop     ebx
+    
+    movq    mm7,[ebx+ 0]
+    movq    [esp-24],mm7
+    
+    movq    mm7,[ebx+ 8]
+    movq    [esp-32],mm7
+    
+    movq    mm7,[ebx+ 16]
+    movq    [esp-40],mm7
+
+    mov     esi,[esp+ps+ 8]
+    mov     edx,[esp+ps+12]
+    mov     ecx,[esp+ps+16]
     
     mov     edi,[esp+ps+ 4]
     mov     edi,[edi]
@@ -147,7 +156,7 @@ __seomFrameConvert:
     
     mov       edi,[esp-4]
     
-    movq      mm7,[yMul]                
+    movq      mm7,[esp-24]
     pmaddwd   mm1,mm7
     movq      mm0,mm1
     psrlq     mm0,32
@@ -192,7 +201,7 @@ __seomFrameConvert:
     add       edi,2
     mov       [esp-8],edi
     
-    movq      mm7,[uMul]            
+    movq      mm7,[esp-32]
     movq      mm6,mm5
     pmaddwd   mm5,mm7
     movq      mm0,mm5
@@ -206,7 +215,7 @@ __seomFrameConvert:
     add       edi,1
     mov       [esp-12],edi
     
-    movq      mm7,[vMul]         
+    movq      mm7,[esp-40]
     pmaddwd   mm6,mm7
     movq      mm0,mm6        
     psrlq     mm0,32
