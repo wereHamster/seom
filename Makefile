@@ -55,7 +55,7 @@ install: seom.pc libseom.la $(APPS)
 	install -m 0644 art/seom.svg $(DESTDIR)/$(PREFIX)/share/seom
 
 	install -m 0755 -d $(DESTDIR)/$(PREFIX)/include/seom
-	install -m 0644 include/seom/* $(DESTDIR)/$(PREFIX)/include/seom
+	install -m 0644 -p include/seom/* $(DESTDIR)/$(PREFIX)/include/seom
 
 	install -m 0755 -d $(DESTDIR)/$(PREFIX)/$(LIBDIR)
 	$(LIBTOOL) --mode=install $(INSTALL) libseom.la $(DESTDIR)/$(PREFIX)/$(LIBDIR)/libseom.la
