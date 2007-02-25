@@ -82,9 +82,9 @@ void seomStreamPut(seomStream *stream, seomFrame *frame)
 {
 	uint64_t pts = frame->pts;	
 	
-	uint32_t size = stream->size[0] * stream->size[1] * 3 / 2;
-	uint8_t *end = seomCodecEncode(stream->buffer, frame->data, size);
-	uint32_t len = end - stream->buffer;
+	const uint32_t size = stream->size[0] * stream->size[1] * 3 / 2;
+	const void *end = seomCodecEncode(stream->buffer, frame->data, size);
+	const uint32_t len = end - stream->buffer;
 	
 	write(stream->fd, &pts, sizeof(pts));
 	write(stream->fd, &len, sizeof(len));
@@ -110,8 +110,8 @@ seomFrame *seomStreamGet(seomStream *stream)
 	read(stream->fd, &len, sizeof(len));
 	read(stream->fd, stream->buffer, len);
 	
-	uint32_t size = stream->size[0] * stream->size[1] * 3 / 2;
-	uint8_t *end = seomCodecDecode(frame->data, stream->buffer, size);
+	const uint32_t size = stream->size[0] * stream->size[1] * 3 / 2;
+	const void *end = seomCodecDecode(frame->data, stream->buffer, size);
 	
 	if (end - stream->buffer != len) {
 		return frame;

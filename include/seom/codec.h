@@ -4,7 +4,7 @@
 
 #include <seom/seom.h>
 
-uint8_t *seomCodecEncode(uint8_t *dst, const uint8_t *src, uint32_t size);
-uint8_t *seomCodecDecode(uint8_t *dst, const uint8_t *src, uint32_t size);
+void *seomCodecEncode(void *dst, const void *src, unsigned long size);
+void *seomCodecDecode(void *dst, const void *src, unsigned long size);
 
 #endif /* __SEOM_CODEC_H__ */

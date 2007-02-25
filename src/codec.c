@@ -7,9 +7,11 @@
  * Copyright 2006, Lasse Reinhold (lar@quicklz.com)
  */
 
+#define min(v0,v1) ( (v0) < (v1) ? (v0) : (v1) )
+#define u8(ptr) ( *(uint8_t *) (ptr) )
 #define u32(ptr) ( *(uint32_t *) (ptr) )
 
-static void __memcpy(void *dst, const void *src, long len)
+static void __memcpy(void *dst, const void *src, unsigned long len)
 {
 	if (src + len > dst) {
 		const void *end = dst + len;
@@ -20,181 +22,174 @@ static void __memcpy(void *dst, const void *src, long len)
 	}
 }
 
-uint8_t *seomCodecEncode(uint8_t *dst, const uint8_t *src, uint32_t size)
+void *seomCodecEncode(void *dst, const void *src, unsigned long size)
 {
-	const uint8_t *end = src + size;
-	const uint8_t **hashtable = (const uint8_t **)(dst + size + 36000 - sizeof(uint8_t *) * 4096);
-	uint8_t *cword_ptr = dst++;
-	uint8_t cword_val = 0;
-	uint8_t cword_counter = 8;
+	const void *end = src + size;
+	const void **hashtable = dst + size;
+	void *cptr = dst++;
+	uint8_t cbyte = 0;
+	unsigned char counter = 8;
 
 	for (int i = 0; i < 4096; ++i)
 		hashtable[i] = src;
 
-	while (src < end - sizeof(uint32_t)) {
+	while (src < end - 5) {
 		if (u32(src) == u32(src + 1)) { /* RLE sequence */
-			uint32_t fetch = u32(src);
-			src += sizeof(uint32_t);
-			const uint8_t *orig = src;
-			while (fetch == u32(src) && src < orig + (0x0fff << 2) - sizeof(uint32_t) && src < end - sizeof(uint32_t))
-				src += sizeof(uint32_t);
-			uint32_t len = (src - orig) / sizeof(uint32_t);
-			*dst++ = (uint8_t) 0xf0 | (len >> 8);
-			*dst++ = (uint8_t) len;
-			*dst++ = (uint8_t) (fetch & 0xff);
-			cword_val = (cword_val << 1) | 1;
+			uint8_t val = u8(src);
+			src += 5;
+			const void *start = src;
+			const void *last = min(start + 0x0fff, end);
+			while (src < last && val == u8(src))
+				++src;
+			unsigned long len = src - start;
+			u8(dst++) = (uint8_t) 0xf0 | (len >> 8);
+			u8(dst++) = (uint8_t) len;
+			u8(dst++) = (uint8_t) val;
+			cbyte = (cbyte << 1) | 1;
 		} else {
 			/* fetch source data and update hash table */
 			uint32_t fetch = ntohl(u32(src));
-			uint32_t hash = ((fetch >> 20) ^ (fetch >> 8)) & 0x0fff;
-			const uint8_t *o = hashtable[hash];
+			unsigned long hash = ((fetch >> 20) ^ (fetch >> 8)) & 0x0fff;
+			const void *o = hashtable[hash];
 			hashtable[hash] = src;
 
-			uint32_t offset = (uint32_t) (src - o);
-			if (offset <= 131071 && offset > 3 && ((ntohl(u32(o)) ^ ntohl(u32(src))) & 0xffffff00) == 0) {
-				if (o[3] != src[3]) {
-					if (offset <= 127) { /* LZ match */
-						*dst++ = offset;
-						cword_val = (cword_val << 1) | 1;
+			unsigned long offset = src - o;
+			if (offset < 131072 && offset > 3 && ((ntohl(u32(o)) ^ ntohl(u32(src))) & 0xffffff00) == 0) {
+				if (u8(o + 3) != u8(src + 3)) {
+					if (offset < 128) { /* LZ match */
+						u8(dst++) = offset;
+						cbyte = (cbyte << 1) | 1;
 						src += 3;
-					} else if (offset <= 8191) { /* LZ match */
-						*dst++ = (uint8_t) 0x80 | offset >> 8;
-						*dst++ = (uint8_t) offset;
-						cword_val = (cword_val << 1) | 1;
+					} else if (offset < 8192) { /* LZ match */
+						u8(dst++) = (uint8_t) 0x80 | offset >> 8;
+						u8(dst++) = (uint8_t) offset;
+						cbyte = (cbyte << 1) | 1;
 						src += 3;
 					} else { /* literal */
-						*dst++ = *src++;
-						cword_val = (cword_val << 1);
+						u8(dst++) = u8(src++);
+						cbyte = (cbyte << 1);
 					}
 				} else { /* LZ match */
-					cword_val = (cword_val << 1) | 1;
-					uint32_t len = 0;
+					cbyte = (cbyte << 1) | 1;
+					unsigned long len = 0;
 
-					while (*(o + len + 4) == *(src + len + 4) && len < (1 << 11) - 1 && src + len + 4 < end - sizeof(uint32_t))
+					while (u8(o + len + 4) == u8(src + len + 4) && len < (1 << 11) - 1 && src + len + 4 < end)
 						++len;
 					src += len + 4;
-					if (len <= 7 && offset <= 1023) { /* 10bits offset, 3bits length */
-						*dst++ = (uint8_t) 0xa0 | (len << 2) | (offset >> 8);
-						*dst++ = (uint8_t) offset;
-					} else if (len <= 31 && offset <= 65535) { /* 16bits offset, 5bits length */
-						*dst++ = (uint8_t) 0xc0 | len;
-						*dst++ = (uint8_t) (offset >> 8);
-						*dst++ = (uint8_t) offset;
+					if (len < 8 && offset < 1024) { /* 10bits offset, 3bits length */
+						u8(dst++) = (uint8_t) 0xa0 | (len << 2) | (offset >> 8);
+						u8(dst++) = (uint8_t) offset;
+					} else if (len < 32 && offset < 65536) { /* 16bits offset, 5bits length */
+						u8(dst++) = (uint8_t) 0xc0 | len;
+						u8(dst++) = (uint8_t) (offset >> 8);
+						u8(dst++) = (uint8_t) offset;
 					} else { /* 17bits offset, 11bits length */
-						*dst++ = (uint8_t) 0xe0 | (len >> 7);
-						*dst++ = (uint8_t) (len << 1) | (offset >> 16);
-						*dst++ = (uint8_t) (offset >> 8);
-						*dst++ = (uint8_t) offset;
+						u8(dst++) = (uint8_t) 0xe0 | (len >> 7);
+						u8(dst++) = (uint8_t) (len << 1) | (offset >> 16);
+						u8(dst++) = (uint8_t) (offset >> 8);
+						u8(dst++) = (uint8_t) offset;
 					}
 				}
 			} else { /* literal */
-				*dst++ = *src++;
-				cword_val = (cword_val << 1);
+				u8(dst++) = u8(src++);
+				cbyte = (cbyte << 1);
 			}
 		}
 
-		--cword_counter;
-		if (cword_counter == 0) { /* store control word */
-			*cword_ptr = cword_val;
-			cword_counter = 8;
-			cword_ptr = dst++;
+		--counter;
+		if (counter == 0) { /* store control byte */
+			u8(cptr) = cbyte;
+			counter = 8;
+			cptr = dst++;
 		}
 	}
 
 	/* save last source bytes as literals */
 	while (src < end) {
-		*dst++ = *src++;
-		cword_val = (cword_val << 1);
-		--cword_counter;
-		if (cword_counter == 0) {
-			*cword_ptr = cword_val;
-			cword_counter = 8;
-			cword_ptr = dst++;
+		u8(dst++) = u8(src++);
+		cbyte = (cbyte << 1);
+		--counter;
+		if (counter == 0) {
+			u8(cptr) = cbyte;
+			counter = 8;
+			cptr = dst++;
 		}
 	}
 
-	if (cword_counter > 0)
-		cword_val = (cword_val << cword_counter) | (1 << (cword_counter - 1));
-	*cword_ptr = cword_val;
+	if (counter > 0)
+		cbyte = (cbyte << counter) | (1 << (counter - 1));
+	u8(cptr) = cbyte;
 
 	return dst;
 }
 
-uint8_t *seomCodecDecode(uint8_t *dst, const uint8_t *src, uint32_t size)
+void *seomCodecDecode(void *dst, const void *src, unsigned long size)
 {
-	const uint8_t *end = dst + size;
-	uint8_t cword_val = *src++;
-	uint8_t cword_counter = 8;
+	const void *end = dst + size;
+	unsigned char counter = 8;
+	uint8_t cbyte = u8(src++);
 
-	while (dst < end - sizeof(uint32_t)) {
-		if (cword_counter == 0) { /* fetch control word */
-			cword_val = *src++;
-			cword_counter = 8;
+	while (dst < end - 5) {
+		if (counter == 0) { /* fetch control byte */
+			cbyte = u8(src++);
+			counter = 8;
 		}
 
-		if (cword_val & (1 << 7)) { /* LZ match or RLE sequence */
-			cword_val = (cword_val << 1) | 1;
-			--cword_counter;
-			if ((src[0] & 0x80) == 0) { /* 7bits offset */
-				uint32_t offset = src[0];
+		if (cbyte & (1 << 7)) { /* LZ match or RLE sequence */
+			cbyte = (cbyte << 1) | 1;
+			--counter;
+			if ((u8(src) & 0x80) == 0) { /* 7bits offset */
+				unsigned long offset = u8(src);
 				__memcpy(dst, dst - offset, 3);
 				dst += 3;
 				src += 1;
-			} else if ((src[0] & 0x60) == 0) { /* 13bits offset */
-				uint32_t offset = ((src[0] & 0x1f) << 8) | src[1];
+			} else if ((u8(src) & 0x60) == 0) { /* 13bits offset */
+				unsigned long offset = ((u8(src) & 0x1f) << 8) | u8(src + 1);
 				__memcpy(dst, dst - offset, 3);
 				dst += 3;
 				src += 2;
-			} else if ((src[0] & 0x40) == 0) { /* 10bits offset, 3bits length */
-				uint32_t len = ((src[0] >> 2) & 7) + 4;
-				uint32_t offset = ((src[0] & 0x03) << 8) | src[1];
+			} else if ((u8(src) & 0x40) == 0) { /* 10bits offset, 3bits length */
+				unsigned long len = ((u8(src) >> 2) & 7) + 4;
+				unsigned long offset = ((u8(src) & 0x03) << 8) | u8(src + 1);
 				__memcpy(dst, dst - offset, len);
 				dst += len;
 				src += 2;
-			} else if ((src[0] & 0x20) == 0) { /* 16bits offset, 5bits length */
-				uint32_t len = (src[0] & 0x1f) + 4;
-				uint32_t offset = (src[1] << 8) | src[2];
+			} else if ((u8(src) & 0x20) == 0) { /* 16bits offset, 5bits length */
+				unsigned long len = (u8(src) & 0x1f) + 4;
+				unsigned long offset = (u8(src + 1) << 8) | u8(src + 2);
 				__memcpy(dst, dst - offset, len);
 				dst += len;
 				src += 3;
-			} else if ((src[0] & 0x10) == 0) { /* 17bits offset, 11bits length */
-				uint32_t len = (((src[0] & 0x0f) << 7) | (src[1] >> 1)) + 4;
-				uint32_t offset = ((src[1] & 0x01) << 16) | (src[2] << 8) | (src[3]);
+			} else if ((u8(src) & 0x10) == 0) { /* 17bits offset, 11bits length */
+				unsigned long len = (((u8(src) & 0x0f) << 7) | (u8(src + 1) >> 1)) + 4;
+				unsigned long offset = ((u8(src + 1) & 0x01) << 16) | (u8(src + 2) << 8) | (u8(src + 3));
 				__memcpy(dst, dst - offset, len);
 				dst += len;
 				src += 4;
 			} else { /* RLE sequence */
-				uint32_t len = ((src[0] & 0x0f) << 8) | src[1];
-				uint32_t val = src[2] | (src[2] << 8) | (src[2] << 16) | (src[2] << 24);
-
-				u32(dst) = val;
-				dst += sizeof(uint32_t);
-
-				const uint8_t *end = dst + len * sizeof(uint32_t);
-				while (dst < end) {
-					u32(dst) = val;
-					dst += sizeof(uint32_t);
-				}
+				unsigned long len = (((u8(src) & 0x0f) << 8) | u8(src + 1)) + 5;
+				memset(dst, u8(src + 2), len);
+				dst += len;
 				src += 3;
 			}
 		} else { /* literal */
-			uint8_t index  = cword_val >> 4;
-			const uint8_t map[8][2] = { { 4, 0x0f }, { 3, 0x07 }, { 2, 0x03 }, { 2, 0x03 }, { 1, 0x01 }, { 1, 0x01 }, { 1, 0x01 }, { 1, 0x01 } };
-			const uint8_t *end = dst + map[index][0];
-			while (dst < end)
-				*dst++ = *src++;
-			cword_counter -= map[index][0];
-			cword_val = (cword_val << map[index][0]) | map[index][1];
+			static const uint8_t map[8][2] = { { 4, 0x0f }, { 3, 0x07 }, { 2, 0x03 }, { 2, 0x03 }, { 1, 0x01 }, { 1, 0x01 }, { 1, 0x01 }, { 1, 0x01 } };
+			unsigned char index = cbyte >> 4;
+			memcpy(dst, src, map[index][0]);
+			dst += map[index][0];
+			src += map[index][0];
+			counter -= map[index][0];
+			cbyte = (cbyte << map[index][0]) | map[index][1];
 		}
 	}
 	
 	while (dst < end) {
-		if (cword_counter == 0) {
-			cword_counter = 8;
+		if (counter == 0) {
+			counter = 8;
 			++src;
 		}
-		*dst++ = *src++;
-		--cword_counter;
+		u8(dst++) = u8(src++);
+		--counter;
 	}
 	
 	return dst;
