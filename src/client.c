@@ -119,15 +119,14 @@ static inline void capture(uint32_t x, uint32_t y, uint32_t w, uint32_t h, void 
 
 void seomClientCapture(seomClient *client, uint32_t xoffset, uint32_t yoffset)
 {
-	uint64_t bufferStatus = seomBufferStatus(client->buffer);
+	unsigned long bufferStatus = seomBufferStatus(client->buffer);
 	
 	pthread_mutex_lock(&client->mutex);
 	double eInterval = client->stat.engineInterval;
 	pthread_mutex_unlock(&client->mutex);
 	
 	double cInterval = client->stat.captureInterval;
-	int64_t bStatus = 8 - bufferStatus;
-	double iCorrection = ( eInterval + bStatus * 100 ) - cInterval;
+	double iCorrection = ( eInterval + (8.0 - bufferStatus) * 100.0 ) - cInterval;
 	client->stat.captureInterval = cInterval * 0.9 + ( cInterval + iCorrection ) * 0.1;
 	if (client->stat.captureInterval < client->interval) {
 		client->stat.captureInterval = client->interval;
@@ -141,7 +140,7 @@ void seomClientCapture(seomClient *client, uint32_t xoffset, uint32_t yoffset)
 
 	double delayMargin = client->stat.captureInterval / 10.0;
 	if (tDelay < delayMargin) {
-		if (bufferStatus) {			
+		if (bufferStatus) {
 			seomFrame *frame = seomBufferHead(client->buffer);
 			
 			frame->pts = timeCurrent;
