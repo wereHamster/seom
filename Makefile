@@ -17,6 +17,7 @@ SRC = src/buffer.c              \
       src/client.c              \
       src/codec.c               \
       src/frame.c               \
+      src/opengl.c              \
       src/server.c              \
       src/stream.c              \
       src/arch/$(ARCH)/frame.c  \

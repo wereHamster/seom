@@ -104,19 +104,6 @@ void seomClientDestroy(seomClient *client)
 	free(client);
 }
 
-static inline void capture(uint32_t x, uint32_t y, uint32_t w, uint32_t h, void *p)
-{
-	static void (*glReadPixels)(GLint x, GLint y, GLsizei w, GLsizei h, GLenum f, GLenum t, GLvoid *p);
-	
-	if (__builtin_expect(glReadPixels == NULL, 0)) {
-		glReadPixels = dlsym(RTLD_DEFAULT, "glReadPixels");
-	}
-	
-	if (__builtin_expect(glReadPixels != NULL, 1)) {
-		(*glReadPixels)(x, y, w, h, GL_BGRA, GL_UNSIGNED_BYTE, p);
-	}
-}
-
 void seomClientCapture(seomClient *client, uint32_t xoffset, uint32_t yoffset)
 {
 	unsigned long bufferStatus = seomBufferStatus(client->buffer);
@@ -144,7 +131,7 @@ void seomClientCapture(seomClient *client, uint32_t xoffset, uint32_t yoffset)
 			seomFrame *frame = seomBufferHead(client->buffer);
 			
 			frame->pts = timeCurrent;
-			capture(xoffset, yoffset, client->size[0], client->size[1], &frame->data[0]);
+			glReadPixels(xoffset, yoffset, client->size[0], client->size[1], GL_BGRA, GL_UNSIGNED_BYTE, &frame->data[0]);
 			
 			seomBufferHeadAdvance(client->buffer);
 
