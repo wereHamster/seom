@@ -4,7 +4,7 @@ BITS 64
 SECTION .rodata
 ALIGN 16
 yMul: dw    16,      157,        47,      0
-uMul: dw   112,      -86,       -26,      0
+uMul: dw   112,      -87,       -26,      0
 vMul: dw   -10,     -102,       112,      0
 
 SECTION .text

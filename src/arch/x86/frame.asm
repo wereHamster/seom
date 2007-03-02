@@ -90,7 +90,7 @@ __seomFrameConvert:
 
     call   .L1
     dw    16,      157,        47,      0
-    dw   112,      -86,       -26,      0
+    dw   112,      -87,       -26,      0
     dw   -10,     -102,       112,      0
 .L1:
     pop     ebx
