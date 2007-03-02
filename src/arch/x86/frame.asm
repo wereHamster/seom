@@ -89,9 +89,9 @@ __seomFrameConvert:
     push    ebp
 
     call   .L1
-    dw    25,      129,        66,      0
-    dw   112,      -74,       -38,      0
-    dw   -18,      -94,       112,      0
+    dw    16,      157,        47,      0
+    dw   112,      -86,       -26,      0
+    dw   -10,     -102,       112,      0
 .L1:
     pop     ebx
     
@@ -208,7 +208,7 @@ __seomFrameConvert:
     psrlq     mm0,32
     paddd     mm5,mm0
     movd      eax,mm5 
-    shr       eax,10     
+    shr       eax,10
     add       eax,128
     mov       edi,[esp-12]
     mov       [edi],al
@@ -217,11 +217,11 @@ __seomFrameConvert:
     
     movq      mm7,[esp-40]
     pmaddwd   mm6,mm7
-    movq      mm0,mm6        
+    movq      mm0,mm6
     psrlq     mm0,32
     paddd     mm6,mm0
-    movd      eax,mm6   
-    shr       eax,10       
+    movd      eax,mm6
+    shr       eax,10
     add       eax,128
     mov       edi,[esp-16]
     mov       [edi],al

@@ -3,9 +3,9 @@ BITS 64
 
 SECTION .rodata
 ALIGN 16
-yMul: dw    25,      129,        66,      0
-uMul: dw   112,      -74,       -38,      0
-vMul: dw   -18,      -94,       112,      0
+yMul: dw    16,      157,        47,      0
+uMul: dw   112,      -86,       -26,      0
+vMul: dw   -10,     -102,       112,      0
 
 SECTION .text
 
@@ -105,7 +105,7 @@ __seomFrameConvert:
     paddw     mm5,mm3
     paddw     mm5,mm4
     
-    movq      mm7,[yMul wrt rip]                
+    movq      mm7,[yMul wrt rip]
     pmaddwd   mm1,mm7
     movq      mm0,mm1
     psrlq     mm0,32
@@ -140,26 +140,26 @@ __seomFrameConvert:
     movd      eax,mm4
     shr       eax,8 
     add       eax,16
-    mov       [rsi+1],al         
+    mov       [rsi+1],al
     
-    movq      mm7,[uMul wrt rip]            
+    movq      mm7,[uMul wrt rip]
     movq      mm6,mm5
     pmaddwd   mm5,mm7
     movq      mm0,mm5
     psrlq     mm0,32
     paddd     mm5,mm0
     movd      eax,mm5 
-    shr       eax,10     
-    add       eax,128   
-    mov       [r12],al                
+    shr       eax,10
+    add       eax,128
+    mov       [r12],al
     
-    movq      mm7,[vMul wrt rip]         
+    movq      mm7,[vMul wrt rip]
     pmaddwd   mm6,mm7
-    movq      mm0,mm6        
+    movq      mm0,mm6
     psrlq     mm0,32
     paddd     mm6,mm0
-    movd      eax,mm6   
-    shr       eax,10       
+    movd      eax,mm6
+    shr       eax,10
     add       eax,128
     mov       [r13],al
     

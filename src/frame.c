@@ -1,8 +1,8 @@
 
 #include <seom/seom.h>
 
-void __seomFrameResample(void *buf, uint32_t w, uint32_t h);
-void __seomFrameConvert(void *dst[3], void *src, uint32_t w, uint32_t h);
+void __seomFrameResample(void *buf, unsigned long w, unsigned long h);
+void __seomFrameConvert(void *dst[3], void *src, unsigned long w, unsigned long h);
 
 seomFrame *seomFrameCreate(uint8_t type, uint32_t size[2])
 {

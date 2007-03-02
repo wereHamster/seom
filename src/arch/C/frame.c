@@ -1,6 +1,12 @@
 
 #include <seom/seom.h>
 
+/*
+ * Y  = 16  +  46.5594 * R + 156.6288 * G +  15.1881 * B
+ * Cb = 128 -  25.6642 * R -  86.3358 * G + 112.0000 * B
+ * Cr = 128 + 112.0000 * R - 101.7303 * G -  10.2697 * B
+ */
+
 #define ri 2
 #define gi 1
 #define bi 0
@@ -11,15 +17,15 @@
 #define byte(ptr) ( *(uint8_t *) (ptr) )
 
 static const uint16_t m[3][3] = {
-	{ f(0.098), f(0.504), f(0.257) },
-	{ f(0.439), f(0.291), f(0.148) },
-	{ f(0.071), f(0.368), f(0.439) }
+	{ f(0.0596), f(0.6142), f(0.1826) },
+	{ f(0.4392), f(0.3386), f(0.1006) },
+	{ f(0.0403), f(0.3989), f(0.4392) }
 };
 
-void __seomFrameResample(void *buf, uint32_t w, uint32_t h)
+void __seomFrameResample(void *buf, unsigned long w, unsigned long h)
 {
-	for (uint32_t y = 0; y < h; y += 2) {
-		for (uint32_t x = 0; x < w; x += 2) {
+	for (unsigned long y = 0; y < h; y += 2) {
+		for (unsigned long x = 0; x < w; x += 2) {
 			#define c(xo,yo,s) ( byte(buf + (y+yo) * (w*4) + (x+xo) * 4 + s) )
 			uint8_t p[2][2][3] = {
 				{ { c(0,0,0), c(0,0,1), c(0,0,2) }, { c(1,0,0), c(1,0,1), c(1,0,2) } },
@@ -41,10 +47,10 @@ void __seomFrameResample(void *buf, uint32_t w, uint32_t h)
 	}
 }
 
-void __seomFrameConvert(void *dst[3], void *src, uint32_t w, uint32_t h)
+void __seomFrameConvert(void *dst[3], void *src, unsigned long w, unsigned long h)
 {
-	for (uint32_t y = 0; y < h; y += 2) {
-		for (uint32_t x = 0; x < w; x += 2) {
+	for (unsigned long y = 0; y < h; y += 2) {
+		for (unsigned long x = 0; x < w; x += 2) {
 			#define c(xo,yo,s) ( byte(src + (y+yo) * (w*4) + (x+xo) * 4 + s) )
 			uint8_t p[2][2][3] = {
 				{ { c(0,0,0), c(0,0,1), c(0,0,2) }, { c(0,1,0), c(0,1,1), c(0,1,2) } },
