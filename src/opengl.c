@@ -1,17 +1,14 @@
 
 #include <seom/seom.h>
 
-#define loadFunction(funcName) \
+#define call(funcName, ...) \
 	static __typeof__(&funcName) func; \
 	if (__builtin_expect(func == NULL, 0)) \
-		func = (__typeof__(func)) glXGetProcAddressARB((const GLubyte *) #funcName);
-
-#define call(funcName, ...) \
-	loadFunction(funcName); \
+		func = (__typeof__(func)) glXGetProcAddressARB((const GLubyte *) #funcName); \
 	if (__builtin_expect(func != NULL, 1)) \
 		(*func)(__VA_ARGS__); \
 
-void (*glXGetProcAddressARB(const GLubyte *procName))(void)
+static void (*glXGetProcAddressARB(const GLubyte *procName))(void)
 {
 	static __typeof__(&glXGetProcAddressARB) func;
 	if (__builtin_expect(func == NULL, 0))
