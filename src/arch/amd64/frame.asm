@@ -1,6 +1,4 @@
 
-BITS 64
-
 SECTION .rodata
 ALIGN 16
 yMul: dw    16,      157,        47,      0
@@ -14,50 +12,50 @@ SECTION .text
 ; rdx : height
 global __seomFrameResample: function
 __seomFrameResample:
-    imul    rsi,4             ; rsi = width in bytes
-    imul    rdx,rsi           ; rdx = size of buffer in bytes
-    lea     rcx,[rdi+rdx]     ; rcx = end of buffer
-    pxor    mm7,mm7
-    mov     r8,rdi            ; r8 = 1st row
-    lea     rdx,[r8+rsi]      ; rdx = end of 1st row
+    imul    rdx,rsi
+    lea     rcx,[rdi+rdx*4]
+    mov     r10,rdi
 
-.L4:
-    lea     r9,[r8+rsi]       ; r9 = 2nd row
+    pxor    mm0,mm0
 
-.L5:
-    movd      mm0,[r8]
-    punpcklbw mm0,mm7
-    movd      mm1,[r8+4]
-    punpcklbw mm1,mm7
-    movd      mm2,[r9]
-    punpcklbw mm2,mm7
-    movd      mm3,[r9+4]
-    punpcklbw mm3,mm7
+.L1:
+    lea     rdx,[r10+rsi*4]
+    mov     r11,rdx
 
-    paddusw   mm0,mm1
-    paddusw   mm0,mm2
-    paddusw   mm0,mm3
-    psrlw     mm0,2
-    packuswb  mm0,mm7
-    movd      [rdi],mm0
-    
-    add     r8,8
-    add     r9,8
+.L2:
+    movd      mm1,[r10]
+    punpcklbw mm1,mm0
+    movd      mm2,[r10+4]
+    punpcklbw mm2,mm0
+    movd      mm3,[r11]
+    punpcklbw mm3,mm0
+    movd      mm4,[r11+4]
+    punpcklbw mm4,mm0
+
+    paddusw   mm1,mm2
+    paddusw   mm1,mm3
+    paddusw   mm1,mm4
+    psrlw     mm1,2
+    packuswb  mm1,mm0
+    movd      [rdi],mm1
+
+    add     r10,8
+    add     r11,8
     add     rdi,4
-    
-    cmp     r8,rdx
-    jne    .L5
 
-.L6:
-    cmp     rcx,r9            ; end of buffer?
-    je     .L9
-    mov     r8,r9             ; r8 = 1st row
-    lea     rdx,[r8+rsi]      ; rdx = end of 1st row
-    jmp    .L4
+    cmp     r10,rdx
+    jne    .L2
 
-.L9:
+    cmp     rcx,r11
+    je     .L3
+
+    mov     r10,r11
+    jmp    .L1
+
+.L3:
     emms
     ret
+
 
 ; rdi : out[3]
 ; rsi : in
@@ -69,92 +67,72 @@ __seomFrameConvert:
     push    r13
     push    r14
     push    r15
-    
-    mov     r8,rsi            ; r8 = 1st src row
-    lea     r14,[rdx*4]       ; r14 = width of one src line
-    imul    rcx,r14           ; rcx = size of buffer in bytes
-    lea     r15,[r8+rcx]      ; r15 = end of buffer
-    lea     rcx,[r8+r14]      ; rcx = end of 1st row
-    
-    mov     r13,[rdi+16]       ; Y/U/V pointers
-    mov     r12,[rdi+8]
-    mov     rdi,[rdi]
 
-.L4:
-    lea     r9,[r8+r14]       ; r9 = 2nd src row
-    lea     rsi,[rdi+rdx]     ; rsi = 2nd dst row
+    imul    rcx,rdx
+    lea     r15,[rsi+rcx*4]
 
-.L5:
+    mov     r12,[rdi]
+    mov     r13,[rdi+8]
+    mov     r14,[rdi+16]
 
-; mm1-mm4, the separate pixels
-; mm5, sum(mm1-mm4)
-; eax, the output register
-; mm0, working copy
- 
-    pxor      mm7,mm7
-    movd      mm1,[r8]
+    pxor    mm7,mm7
+
+.L1:
+    lea     rcx,[rsi+rdx*4]
+
+.L2:
+    movd      mm1,[rsi]
     punpcklbw mm1,mm7
-    movd      mm2,[r8+4]
+    movd      mm2,[rsi+4]
     punpcklbw mm2,mm7
-    movd      mm3,[r9]
-    punpcklbw mm3,mm7  
-    movd      mm4,[r9+4]
-    punpcklbw mm4,mm7  
+    movd      mm3,[rsi+rdx*4]
+    punpcklbw mm3,mm7
+    movd      mm4,[rsi+rdx*4+4]
+    punpcklbw mm4,mm7
     movq      mm5,mm1
     paddw     mm5,mm2
     paddw     mm5,mm3
     paddw     mm5,mm4
-    
-    movq      mm7,[yMul wrt rip]
-    pmaddwd   mm1,mm7
+
+    movq      mm6,[yMul wrt rip]
+    pmaddwd   mm1,mm6
     movq      mm0,mm1
     psrlq     mm0,32
     paddd     mm1,mm0
     movd      eax,mm1
     shr       eax,8
     add       eax,16
-    mov       [rdi],al
-    
-    pmaddwd   mm2,mm7
+    mov       [r12],al
+
+    pmaddwd   mm2,mm6
     movq      mm0,mm2
     psrlq     mm0,32
     paddd     mm2,mm0
     movd      eax,mm2
     shr       eax,8
     add       eax,16
-    mov       [rdi+1],al
-    
-    pmaddwd   mm3,mm7
+    mov       [r12+1],al
+
+    pmaddwd   mm3,mm6
     movq      mm0,mm3
     psrlq     mm0,32
-    paddd     mm3,mm0 
+    paddd     mm3,mm0
     movd      eax,mm3
     shr       eax,8
     add       eax,16
-    mov       [rsi],al
-    
-    pmaddwd   mm4,mm7
+    mov       [r12+rdx],al
+
+    pmaddwd   mm4,mm6
     movq      mm0,mm4
     psrlq     mm0,32
     paddd     mm4,mm0
     movd      eax,mm4
-    shr       eax,8 
+    shr       eax,8
     add       eax,16
-    mov       [rsi+1],al
-    
-    movq      mm7,[uMul wrt rip]
-    movq      mm6,mm5
-    pmaddwd   mm5,mm7
-    movq      mm0,mm5
-    psrlq     mm0,32
-    paddd     mm5,mm0
-    movd      eax,mm5 
-    shr       eax,10
-    add       eax,128
-    mov       [r12],al
-    
-    movq      mm7,[vMul wrt rip]
-    pmaddwd   mm6,mm7
+    mov       [r12+rdx+1],al
+
+    movq      mm6,[uMul wrt rip]
+    pmaddwd   mm6,mm5
     movq      mm0,mm6
     psrlq     mm0,32
     paddd     mm6,mm0
@@ -162,33 +140,40 @@ __seomFrameConvert:
     shr       eax,10
     add       eax,128
     mov       [r13],al
-    
-    add     r8,8
-    add     r9,8
-    
-    add     rdi,2
-    add     rsi,2
-    
-    inc     r12
-    inc     r13
-    
-    cmp     r8,rcx
-    jne    .L5
 
-.L6:
-    cmp     r15,r9            ; end of buffer?
-    je     .L9
-    mov     r8,r9             ; r8 = 1st src row
-    mov     rdi,rsi           ; rdi = 1st dst row
-    lea     rcx,[r8+r14]      ; rcx = end of 1st row
-    jmp    .L4
+    movq      mm6,[vMul wrt rip]
+    pmaddwd   mm6,mm5
+    movq      mm0,mm6
+    psrlq     mm0,32
+    paddd     mm6,mm0
+    movd      eax,mm6
+    shr       eax,10
+    add       eax,128
+    mov       [r14],al
 
-.L9:
+    add     rsi,8
+
+    add     r12,2
+    add     r13,1
+    add     r14,1
+
+    cmp     rsi,rcx
+    jne    .L2
+
+    lea     rsi,[rsi+rdx*4]
+    cmp     r15,rsi
+    je     .L3
+
+    lea     r12,[r12+rdx]
+    jmp    .L1
+
+.L3:
     pop     r15
     pop     r14
     pop     r13
     pop     r12
-    
+
+    emms
     ret
 
 SECTION ".note.GNU-stack" noalloc noexec nowrite progbits

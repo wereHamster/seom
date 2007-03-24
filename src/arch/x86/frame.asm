@@ -115,7 +115,7 @@ __seomFrameConvert:
     pxor    mm7,mm7
 
 .L2:
-    lea     ecx,[esi+edx*4]   ; ecx = end of 1st row
+    lea     ecx,[esi+edx*4]
 
 .L3:
     movd      mm1,[esi]
