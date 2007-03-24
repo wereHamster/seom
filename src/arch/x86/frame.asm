@@ -1,6 +1,4 @@
 
-BITS 32
-
 SECTION .text
 
 ; [esp+ 4] : buf
@@ -8,253 +6,230 @@ SECTION .text
 ; [esp+12] : height
 global __seomFrameResample: function
 __seomFrameResample:
-%define ps 20
     push    edi
     push    esi
     push    edx
     push    ecx
     push    ebx
 
-    mov     edi, [esp+ps+ 4]
-    mov     esi, [esp+ps+ 8]
-    mov     edx, [esp+ps+12]
-    
-    imul    esi,4             ; esi = width in bytes
-    imul    edx,esi           ; edx = size of buffer in bytes
-    lea     ecx,[edi+edx]     ; ecx = end of buffer
-    pxor    mm7,mm7
-    mov     eax,edi           ; eax = 1st row
-    lea     edx,[eax+esi]     ; edx = end of 1st row
+    mov     edi,[esp+24]
+    mov     esi,[esp+28]
+    mov     edx,[esp+32]
 
-.L4:
-    lea     ebx,[eax+esi]     ; ebx = 2nd row
+    imul    edx,esi
+    lea     ecx,[edi+edx*4]
+    mov     eax,edi
 
-.L5:
-    movd      mm0,[eax]
-    punpcklbw mm0,mm7
-    movd      mm1,[eax+4]
-    punpcklbw mm1,mm7
-    movd      mm2,[ebx]
-    punpcklbw mm2,mm7
-    movd      mm3,[ebx+4]
-    punpcklbw mm3,mm7
+    pxor    mm0,mm0
 
-    paddusw   mm0,mm1
-    paddusw   mm0,mm2
-    paddusw   mm0,mm3
-    psrlw     mm0,2
-    packuswb  mm0,mm7
-    movd      [edi],mm0
+.L1:
+    lea     edx,[eax+esi*4]
+    mov     ebx,edx
+
+.L2:
+    movd      mm1,[eax]
+    punpcklbw mm1,mm0
+    movd      mm2,[eax+4]
+    punpcklbw mm2,mm0
+    movd      mm3,[ebx]
+    punpcklbw mm3,mm0
+    movd      mm4,[ebx+4]
+    punpcklbw mm4,mm0
+
+    paddusw   mm1,mm2
+    paddusw   mm1,mm3
+    paddusw   mm1,mm4
+    psrlw     mm1,2
+    packuswb  mm1,mm0
+    movd      [edi],mm1
     
     add     eax,8
     add     ebx,8
     add     edi,4
-    
+
     cmp     eax,edx
-    jne    .L5
+    jne    .L2
 
-.L6:
-    cmp     ecx,ebx           ; end of buffer?
-    je     .L9
-    mov     eax,ebx           ; eax = 1st row
-    lea     edx,[eax+esi]     ; edx = end of 1st row
-    jmp    .L4
+    cmp     ecx,ebx
+    je     .L3
 
-.L9:
-    emms
-    
+    mov     eax,ebx
+    jmp    .L1
+
+.L3:
     pop     ebx
     pop     ecx
     pop     edx
     pop     esi
     pop     edi
-    
+
+    emms
     ret
 
 
-SECTION .text
-
-; edi : out[3]
-; esi : in
-; edx : width
-; ecx : height
+; [esp+ 4] : out[3]
+; [esp+ 8] : in
+; [esp+12] : width
+; [esp+16] : height
 global __seomFrameConvert: function
 __seomFrameConvert:
-%define ps 24
     push    edi
     push    esi
     push    edx
     push    ecx
-    push    ebx
     push    ebp
+    push    ebx
+
+    mov     esi,[esp+32]
+    mov     edx,[esp+36]
+    mov     ecx,[esp+40]
+
+    imul    ecx,edx
+    lea     ebx,[esi+ecx*4]
+
+    sub     esp,12
+    mov     edi,[esp+40]
+
+    mov     eax,[edi+0]
+    mov     [esp+0],eax
+    mov     eax,[edi+4]
+    mov     [esp+4],eax
+    mov     eax,[edi+8]
+    mov     [esp+8],eax
 
     call   .L1
     dw    16,      157,        47,      0
     dw   112,      -87,       -26,      0
     dw   -10,     -102,       112,      0
 .L1:
-    pop     ebx
+    pop     eax
+    sub     esp,24
     
-    movq    mm7,[ebx+ 0]
-    movq    [esp-24],mm7
-    
-    movq    mm7,[ebx+ 8]
-    movq    [esp-32],mm7
-    
-    movq    mm7,[ebx+ 16]
-    movq    [esp-40],mm7
+    movq    mm7,[eax]
+    movq    [esp],mm7
+    movq    mm7,[eax+8]
+    movq    [esp+8],mm7
+    movq    mm7,[eax+16]
+    movq    [esp+16],mm7
 
-    mov     esi,[esp+ps+ 8]
-    mov     edx,[esp+ps+12]
-    mov     ecx,[esp+ps+16]
-    
-    mov     edi,[esp+ps+ 4]
-    mov     edi,[edi]
-    mov     [esp-4],edi
-    
-    mov     edi,[esp+ps+ 4]
-    mov     edi,[edi]
-    add     edi,edx
-    mov     [esp-8],edi
-    
-    mov     edi,[esp+ps+ 4]
-    mov     edi,[edi+4]
-    mov     [esp-12],edi
-    
-    mov     edi,[esp+ps+ 4]
-    mov     edi,[edi+8]
-    mov     [esp-16],edi
-    
-    imul    edx,4             ; edx = width in bytes
-    imul    ecx,edx           ; ecx = size of buffer in bytes
-    lea     ebx,[esi+ecx]     ; ebx = end of buffer
-    lea     ecx,[esi+edx]     ; ecx = end of 1st row
+    pxor    mm7,mm7
 
-.L4:
-    lea     ebp,[esi+edx]     ; ebp = esi + one row
+.L2:
+    lea     ecx,[esi+edx*4]   ; ecx = end of 1st row
 
-.L5:
-
-; mm1-mm4, the separate pixels
-; mm5, sum(mm1-mm4)
-; eax, the output register
-; mm0, working copy
- 
-    pxor      mm7,mm7
+.L3:
     movd      mm1,[esi]
     punpcklbw mm1,mm7
     movd      mm2,[esi+4]
     punpcklbw mm2,mm7
-    movd      mm3,[ebp]
-    punpcklbw mm3,mm7  
-    movd      mm4,[ebp+4]
-    punpcklbw mm4,mm7  
+    movd      mm3,[esi+edx*4]
+    punpcklbw mm3,mm7
+    movd      mm4,[esi+edx*4+4]
+    punpcklbw mm4,mm7
     movq      mm5,mm1
     paddw     mm5,mm2
     paddw     mm5,mm3
     paddw     mm5,mm4
-    
-    mov       edi,[esp-4]
-    
-    movq      mm7,[esp-24]
-    pmaddwd   mm1,mm7
+
+    movq    mm6,[esp]
+
+    pmaddwd   mm1,mm6
     movq      mm0,mm1
     psrlq     mm0,32
     paddd     mm1,mm0
     movd      eax,mm1
     shr       eax,8
     add       eax,16
-    mov       [edi],al
+
+    mov     edi,[esp+24]
+    mov     [edi],al
     
-    pmaddwd   mm2,mm7
+    pmaddwd   mm2,mm6
     movq      mm0,mm2
     psrlq     mm0,32
     paddd     mm2,mm0
     movd      eax,mm2
     shr       eax,8
     add       eax,16
-    mov       [edi+1],al
     
-    add       edi,2
-    mov       [esp-4],edi
-    
-    mov       edi,[esp-8]
-    
-    pmaddwd   mm3,mm7
+    mov     [edi+1],al
+    add     edi,2
+    mov     [esp+24],edi
+    lea     edi,[edi+edx-2]
+
+    pmaddwd   mm3,mm6
     movq      mm0,mm3
     psrlq     mm0,32
-    paddd     mm3,mm0 
+    paddd     mm3,mm0
     movd      eax,mm3
     shr       eax,8
     add       eax,16
-    mov       [edi],al
+
+    mov     [edi],al
     
-    pmaddwd   mm4,mm7
+    pmaddwd   mm4,mm6
     movq      mm0,mm4
     psrlq     mm0,32
     paddd     mm4,mm0
     movd      eax,mm4
-    shr       eax,8 
+    shr       eax,8
     add       eax,16
-    mov       [edi+1],al
-    
-    add       edi,2
-    mov       [esp-8],edi
-    
-    movq      mm7,[esp-32]
-    movq      mm6,mm5
-    pmaddwd   mm5,mm7
-    movq      mm0,mm5
-    psrlq     mm0,32
-    paddd     mm5,mm0
-    movd      eax,mm5 
-    shr       eax,10
-    add       eax,128
-    mov       edi,[esp-12]
-    mov       [edi],al
-    add       edi,1
-    mov       [esp-12],edi
-    
-    movq      mm7,[esp-40]
-    pmaddwd   mm6,mm7
+
+    mov     [edi+1],al
+    mov     edi,[esp+28]
+    movq    mm6,[esp+8]
+
+    pmaddwd   mm6,mm5
     movq      mm0,mm6
     psrlq     mm0,32
     paddd     mm6,mm0
     movd      eax,mm6
     shr       eax,10
     add       eax,128
-    mov       edi,[esp-16]
-    mov       [edi],al
-    add       edi,1
-    mov       [esp-16],edi
+
+    mov     [edi],al
+    add     edi,1
+    mov     [esp+28],edi
+    mov     edi,[esp+32]
+    movq    mm6,[esp+16]
+
+    pmaddwd   mm6,mm5
+    movq      mm0,mm6
+    psrlq     mm0,32
+    paddd     mm6,mm0
+    movd      eax,mm6
+    shr       eax,10
+    add       eax,128
+
+    mov     [edi],al
+    add     edi,1
+    mov     [esp+32],edi
     
     add     esi,8
-    add     ebp,8
     
     cmp     esi,ecx
-    jne    .L5
+    jne    .L3
 
-.L6:
-    cmp     ebx,ebp           ; end of buffer?
-    je     .L9
-    mov     esi,ebp           ; esi = 1st row
-    lea     ecx,[esi+edx]     ; ecx = end of 1st row
-    mov     edi,[esp-8]
-    mov     [esp-4],edi
-    add     edi,[esp+ps+12]
-    mov     [esp-8],edi
-    jmp    .L4
+    lea     esi,[esi+edx*4]
+    cmp     esi,ebx
+    je     .L4
 
-.L9:
-    emms
-    
-    pop     ebp
+    mov     edi,[esp+24]
+    add     edi,edx
+    mov     [esp+24],edi
+    jmp    .L2
+
+.L4:
+    add     esp,36
+
     pop     ebx
+    pop     ebp
     pop     ecx
     pop     edx
     pop     esi
     pop     edi
-    
+
+    emms
     ret
 
 SECTION ".note.GNU-stack" noalloc noexec nowrite progbits
