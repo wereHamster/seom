@@ -10,11 +10,10 @@ __seomFrameResample:
     push    esi
     push    edx
     push    ecx
-    push    ebx
 
-    mov     edi,[esp+24]
-    mov     esi,[esp+28]
-    mov     edx,[esp+32]
+    mov     edi,[esp+20]
+    mov     esi,[esp+24]
+    mov     edx,[esp+28]
 
     imul    edx,esi
     lea     ecx,[edi+edx*4]
@@ -24,16 +23,15 @@ __seomFrameResample:
 
 .L1:
     lea     edx,[eax+esi*4]
-    mov     ebx,edx
 
 .L2:
     movd      mm1,[eax]
     punpcklbw mm1,mm0
     movd      mm2,[eax+4]
     punpcklbw mm2,mm0
-    movd      mm3,[ebx]
+    movd      mm3,[eax+esi*4]
     punpcklbw mm3,mm0
-    movd      mm4,[ebx+4]
+    movd      mm4,[eax+esi*4+4]
     punpcklbw mm4,mm0
 
     paddusw   mm1,mm2
@@ -44,20 +42,15 @@ __seomFrameResample:
     movd      [edi],mm1
     
     add     eax,8
-    add     ebx,8
     add     edi,4
 
     cmp     eax,edx
     jne    .L2
 
-    cmp     ecx,ebx
-    je     .L3
+    lea     eax,[eax+esi*4]
+    cmp     eax,ecx
+    jne    .L1
 
-    mov     eax,ebx
-    jmp    .L1
-
-.L3:
-    pop     ebx
     pop     ecx
     pop     edx
     pop     esi

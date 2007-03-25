@@ -14,22 +14,21 @@ global __seomFrameResample: function
 __seomFrameResample:
     imul    rdx,rsi
     lea     rcx,[rdi+rdx*4]
-    mov     r10,rdi
+    mov     rax,rdi
 
     pxor    mm0,mm0
 
 .L1:
-    lea     rdx,[r10+rsi*4]
-    mov     r11,rdx
+    lea     rdx,[rax+rsi*4]
 
 .L2:
-    movd      mm1,[r10]
+    movd      mm1,[rax]
     punpcklbw mm1,mm0
-    movd      mm2,[r10+4]
+    movd      mm2,[rax+4]
     punpcklbw mm2,mm0
-    movd      mm3,[r11]
+    movd      mm3,[rax+rsi*4]
     punpcklbw mm3,mm0
-    movd      mm4,[r11+4]
+    movd      mm4,[rax+rsi*4+4]
     punpcklbw mm4,mm0
 
     paddusw   mm1,mm2
@@ -39,20 +38,16 @@ __seomFrameResample:
     packuswb  mm1,mm0
     movd      [rdi],mm1
 
-    add     r10,8
-    add     r11,8
+    add     rax,8
     add     rdi,4
 
-    cmp     r10,rdx
+    cmp     rax,rdx
     jne    .L2
 
-    cmp     rcx,r11
-    je     .L3
+    lea     rax,[rax+rsi*4]
+    cmp     rax,rcx
+    jne    .L1
 
-    mov     r10,r11
-    jmp    .L1
-
-.L3:
     emms
     ret
 
