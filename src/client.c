@@ -106,26 +106,27 @@ void seomClientDestroy(seomClient *client)
 
 void seomClientCapture(seomClient *client, uint32_t xoffset, uint32_t yoffset)
 {
-	unsigned long bufferStatus = seomBufferStatus(client->buffer);
-	
+	const unsigned long bufferStatus = seomBufferStatus(client->buffer);
+
 	pthread_mutex_lock(&client->mutex);
-	double eInterval = client->stat.engineInterval;
+	const double eInterval = client->stat.engineInterval;
 	pthread_mutex_unlock(&client->mutex);
-	
+
 	double cInterval = client->stat.captureInterval;
 	double iCorrection = ( eInterval + (8.0 - bufferStatus) * 100.0 ) - cInterval;
+
 	client->stat.captureInterval = cInterval * 0.9 + ( cInterval + iCorrection ) * 0.1;
 	if (client->stat.captureInterval < client->interval) {
 		client->stat.captureInterval = client->interval;
 	}
 
-	uint64_t timeCurrent = seomTime();
-	double tElapsed = (double) (timeCurrent - client->stat.lastCapture);
+	const uint64_t timeCurrent = seomTime();
+	const double tElapsed = (double) (timeCurrent - client->stat.lastCapture);
 	client->stat.lastCapture = timeCurrent;
 
-	double tDelay = client->stat.captureDelay - tElapsed;
+	const double tDelay = client->stat.captureDelay - tElapsed;
 
-	double delayMargin = client->stat.captureInterval / 10.0;
+	const double delayMargin = client->stat.captureInterval / 10.0;
 	if (tDelay < delayMargin) {
 		if (bufferStatus) {
 			seomFrame *frame = seomBufferHead(client->buffer);
