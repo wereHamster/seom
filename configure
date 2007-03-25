@@ -1,23 +1,23 @@
 #!/bin/sh
 
-# default values
+case $(uname -m) in	i*86) ARCH="x86";; x86_64) ARCH="amd64";; *) ARCH="C";; esac
+CFLAGS="-O3 -W -Wall"
 PREFIX="/usr/local"
-ARCH="C"
-
-case $(uname -m) in
-	i*86) ARCH="x86" ;;
-	x86_64) ARCH="amd64" ;;
-esac
 
 for opt do
-	case "$opt" in
-		--prefix=*) PREFIX="${opt#*=}"
+	case "${opt}" in
+		--arch=*) ARCH="${opt#*=}";;
+		--cflags=*) CFLAGS="${opt#*=}";;
+		--prefix=*) PREFIX="${opt#*=}";;
 	esac
 done
 
-rm -f config.make
-echo "PREFIX   = ${PREFIX}" >> config.make
-echo "ARCH     = ${ARCH}" >> config.make 
+cat > config.make << EOF
+ARCH     = ${ARCH}
+CFLAGS  += ${CFLAGS}
+PREFIX   = ${PREFIX}
+EOF
 
-echo "prefix:   ${PREFIX}"
 echo "arch:     ${ARCH}"
+echo "cflags:   ${CFLAGS}"
+echo "prefix:   ${PREFIX}"

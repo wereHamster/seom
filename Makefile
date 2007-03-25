@@ -1,76 +1,55 @@
 
+MAJOR    = 0
+LIBRARY  = libseom.so
+
 DESTDIR  = 
 LIBDIR   = lib
 
-RM       = rm
 CC       = gcc
 ASM      = yasm
-LIBTOOL  = libtool
-INSTALL  = install
 
-CFLAGS   = -Iinclude -std=c99 -O3 -W -Wall
+CFLAGS   = -Iinclude -std=c99
 LDFLAGS  = -Wl,--as-needed
 
 include config.make
 
-SRC = src/buffer.c              \
-      src/client.c              \
-      src/codec.c               \
-      src/frame.c               \
-      src/opengl.c              \
-      src/server.c              \
-      src/stream.c              \
-      src/arch/$(ARCH)/frame.c  \
-
-OBJS = $(SRC:%.c=%.lo)
+OBJS = src/buffer.o src/client.o src/codec.o src/frame.o src/opengl.o \
+       src/server.o src/stream.o src/arch/$(ARCH)/frame.o
 
 APPS = filter player server
 playerLIBS = -lX11 -lXv
 
 .PHONY: all clean install
-all: libseom.la $(APPS)
+all: $(LIBRARY) $(APPS)
 
-%.lo: %.asm
-	$(LIBTOOL) --tag=CC --mode=compile $(ASM) -f elf -m $(ARCH) -o $@ -prefer-non-pic $<
+%.o: %.asm
+	$(ASM) -m $(ARCH) -f elf -o $@ $<
 
-%.lo: %.c
-	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(CFLAGS) -c -o $@ $<
+%.o: %.c
+	$(CC) $(CFLAGS) -fPIC -c -o $@ $<
 
-libseom.la: $(OBJS)
-	$(LIBTOOL) --tag=CC --mode=link $(CC) $(LDFLAGS) -rpath $(PREFIX)/$(LIBDIR) -o $@ $(OBJS) -ldl -lpthread
+$(LIBRARY): $(OBJS)
+	$(CC) -shared $(LDFLAGS) -Wl,-soname,$@.$(MAJOR) -o $@ $(OBJS) -ldl -lpthread
 
-example: example.c
-	$(CC) $(CFLAGS) $(LDFLAGS) -L.libs -o $@ $< -lseom -lX11 -lGL
-
-$(APPS): libseom.la
-	$(CC) $(CFLAGS) $(LDFLAGS) -L.libs -o $@ src/$@/main.c -lseom $($@LIBS)
+$(APPS): $(LIBRARY)
+	$(CC) $(CFLAGS) $(LDFLAGS) -L. -o $@ src/$@/main.c -lseom $($@LIBS)
 
 seom.pc: seom.pc.in
 	./seom.pc.in $(PREFIX) $(LIBDIR)
 
-install: seom.pc libseom.la $(APPS)
-	install -m 0755 -d $(DESTDIR)/$(PREFIX)/$(LIBDIR)/pkgconfig
-	install -m 0644 seom.pc $(DESTDIR)/$(PREFIX)/$(LIBDIR)/pkgconfig
+inst = install -m 755 -d $(DESTDIR)$(3); install -m $(1) $(2) $(DESTDIR)$(3)$(if $(4),/$(4));
+install: $(LIBRARY) $(APPS) seom.pc
+	$(call inst,644,seom.pc,$(PREFIX)/$(LIBDIR)/pkgconfig)
+	$(call inst,755,$(LIBRARY),$(PREFIX)/$(LIBDIR),$(LIBRARY).$(MAJOR))
+	ln -sf $(LIBRARY).$(MAJOR) $(DESTDIR)$(PREFIX)/$(LIBDIR)/$(LIBRARY)
 
-	install -m 0755 -d $(DESTDIR)/$(PREFIX)/share/seom
-	install -m 0644 art/seom.svg $(DESTDIR)/$(PREFIX)/share/seom
-
-	install -m 0755 -d $(DESTDIR)/$(PREFIX)/include/seom
-	install -m 0644 -p include/seom/* $(DESTDIR)/$(PREFIX)/include/seom
-
-	install -m 0755 -d $(DESTDIR)/$(PREFIX)/$(LIBDIR)
-	$(LIBTOOL) --mode=install $(INSTALL) libseom.la $(DESTDIR)/$(PREFIX)/$(LIBDIR)/libseom.la
-
-	install -m 0755 -d $(DESTDIR)/$(PREFIX)/bin
-	install -m 0755 filter $(DESTDIR)/$(PREFIX)/bin/seom-filter
-	install -m 0755 player $(DESTDIR)/$(PREFIX)/bin/seom-player
-	install -m 0755 server $(DESTDIR)/$(PREFIX)/bin/seom-server
-
-	install -m 0755 src/scripts/backup $(DESTDIR)/$(PREFIX)/bin/seom-backup
+	$(call inst,644,art/seom.svg,$(PREFIX)/share/seom,seom.svg)
+	$(call inst,644,include/seom/*,$(PREFIX)/include/seom)
+	$(call inst,755,src/scripts/backup,$(PREFIX)/bin,seom-backup)
+	$(foreach app,$(APPS),$(call inst,755,$(app),$(PREFIX)/bin,seom-$(app)))
 
 clean:
-	$(LIBTOOL) --mode=clean $(RM) -f $(OBJS) libseom.la
-	$(RM) -f $(APPS) seom.pc
+	rm -f $(OBJS) $(LIBRARY) $(APPS) seom.pc
 
 mrproper: clean
-	$(RM) -f config.make
+	rm -f config.make
