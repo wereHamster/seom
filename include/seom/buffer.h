@@ -7,8 +7,11 @@ typedef struct seomBuffer
 	pthread_mutex_t mutex;
 	pthread_cond_t cond;
 
+	unsigned long size;
 	unsigned long count;
-	unsigned long head, tail;
+	
+	unsigned long head;
+	unsigned long tail;
 
 	void *array[0];
 } seomBuffer;

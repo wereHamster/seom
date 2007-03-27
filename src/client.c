@@ -1,7 +1,7 @@
 
 #include <seom/seom.h>
 
-static void copyFrame(seomFrame *dst, seomFrame *src, uint32_t size[2], uint32_t scale)
+static void seomClientCopy(seomFrame *dst, seomFrame *src, uint32_t size[2], uint32_t scale)
 {
 	uint32_t tmp[2] = { size[0], size[1] };
 
@@ -13,65 +13,64 @@ static void copyFrame(seomFrame *dst, seomFrame *src, uint32_t size[2], uint32_t
 	seomFrameConvert(dst, src, tmp);
 }
 
-static void *clientThread(void *data)
+static void *seomClientThreadCallback(void *data)
 {
 	seomClient *client = data;
-
+	
 	uint32_t size[2] = { client->size[0] >> client->scale, client->size[1] >> client->scale };
 	seomFrame *dst = seomFrameCreate('c', size);
-
-	unsigned long codecBufferLength = sizeof(uint64_t) + size[0] * size[1] * 3;
-	void *codecBuffer = malloc(codecBufferLength); /* FIXME: check return value */
-
+	
 	for (;;) {
 		seomFrame *src = seomBufferTail(client->buffer);
-		if (__builtin_expect(src->pts == 0, 0))
+		if (__builtin_expect(src->pts == 0, 0)) {
+			seomBufferTailAdvance(client->buffer);
 			break;
+		}
 
 		uint64_t start = seomTime();
-		copyFrame(dst, src, client->size, client->scale);
-		*(uint64_t *) codecBuffer = src->pts;
-		void *end = seomCodecEncode(codecBuffer + sizeof(uint64_t), dst->data, size[0] * size[1] * 3 / 2);
-		seomStreamPut(client->stream, client->videoSubStreamID, end - codecBuffer, codecBuffer);
+		seomClientCopy(dst, src, client->size, client->scale);
+		seomStreamPut(client->stream, dst);
 		double tElapsed = (double) ( seomTime() - start );
 
 		seomBufferTailAdvance(client->buffer);
 		
 		const double eDecay = 1.0 / 60.0;
 		pthread_mutex_lock(&client->mutex);
-		client->stat.engineInterval = client->stat.engineInterval * ( 1.0 - eDecay ) + tElapsed * eDecay;
+		double eInterval = client->stat.engineInterval;
+		client->stat.engineInterval = eInterval * ( 1.0 - eDecay ) + tElapsed * eDecay;
 		pthread_mutex_unlock(&client->mutex);
 		
 	}
-
-	seomBufferTailAdvance(client->buffer);
+	
 	seomFrameDestroy(dst);
-
+	
 	return NULL;
 }
 
 seomClient *seomClientCreate(seomClientConfig *config)
 {
 	seomClient *client = malloc(sizeof(seomClient));
-	if (__builtin_expect(client == NULL, 0))
+	if (__builtin_expect(client == NULL, 0)) {
+		printf("seomClientStart(): out of memory\n");
 		return NULL;
+	}
 	
 	client->scale = config->scale;
 	
 	client->size[0] = config->size[0] & ~((1 << (client->scale + 1)) - 1);
 	client->size[1] = config->size[1] & ~((1 << (client->scale + 1)) - 1);
 	
-	uint32_t size[2] = { client->size[0] >> config->scale, client->size[1] >> config->scale };
-	if (size[0] == 0 || size[1] == 0)
-		return NULL;
-	
-	client->stream = seomStreamCreate(config->output);
-	if (__builtin_expect(client->stream == NULL, 0)) {
+	uint32_t size[2] = { client->size[0] >> client->scale, client->size[1] >> client->scale };
+	if (size[0] == 0 || size[1] == 0) {
 		free(client);
 		return NULL;
 	}
 	
-	client->videoSubStreamID = seomStreamInsert(client->stream, 'v', sizeof(size), size);
+	client->stream = seomStreamCreate('o', config->output, size);
+	if (__builtin_expect(client->stream == NULL, 0)) {
+		free(client);
+		return NULL;
+	}
 	
 	client->buffer = seomBufferCreate(sizeof(seomFrame) + client->size[0] * client->size[1] * 4, 16);	
 
@@ -83,7 +82,7 @@ seomClient *seomClientCreate(seomClientConfig *config)
 	client->stat.lastCapture = seomTime();
 	
 	pthread_mutex_init(&client->mutex, NULL);
-	pthread_create(&client->thread, NULL, clientThread, client);
+	pthread_create(&client->thread, NULL, seomClientThreadCallback, client);
 	
 	return client;
 }
@@ -117,8 +116,9 @@ void seomClientCapture(seomClient *client, uint32_t xoffset, uint32_t yoffset)
 	double iCorrection = ( eInterval + (8.0 - bufferStatus) * 100.0 ) - cInterval;
 
 	client->stat.captureInterval = cInterval * 0.9 + ( cInterval + iCorrection ) * 0.1;
-	if (client->stat.captureInterval < client->interval)
+	if (client->stat.captureInterval < client->interval) {
 		client->stat.captureInterval = client->interval;
+	}
 
 	const uint64_t timeCurrent = seomTime();
 	const double tElapsed = (double) (timeCurrent - client->stat.lastCapture);
@@ -133,7 +133,7 @@ void seomClientCapture(seomClient *client, uint32_t xoffset, uint32_t yoffset)
 			
 			frame->pts = timeCurrent;
 			glReadPixels(xoffset, yoffset, client->size[0], client->size[1], GL_BGRA, GL_UNSIGNED_BYTE, &frame->data[0]);
-
+			
 			seomBufferHeadAdvance(client->buffer);
 
 			if (tDelay < 0) { // frame too late
