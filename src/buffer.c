@@ -9,22 +9,19 @@ static unsigned long num(seomBuffer *buffer)
 seomBuffer *seomBufferCreate(unsigned long size, unsigned long count)
 {
 	seomBuffer *buffer = malloc(sizeof(seomBuffer) + count * (size + sizeof(void *)));
-	if (__builtin_expect(buffer == NULL, 0)) {
+	if (__builtin_expect(buffer == NULL, 0))
 		return NULL;
-	}
 
 	pthread_mutex_init(&buffer->mutex, NULL);
 	pthread_cond_init(&buffer->cond, NULL);
 
-	buffer->size = size;
 	buffer->count = count;
 
 	buffer->head = 0;
 	buffer->tail = 0;
 
-	for (unsigned long index = 0; index < count; ++index) {
+	for (unsigned long index = 0; index < count; ++index)
 		buffer->array[index] = (void *) buffer + sizeof(seomBuffer) + count * sizeof(void *) + index * size;
-	}
 
 	return buffer;
 }
@@ -39,14 +36,11 @@ void seomBufferDestroy(seomBuffer *buffer)
 
 void *seomBufferHead(seomBuffer *buffer)
 {
-	void *ret = NULL;
-
 	pthread_mutex_lock(&buffer->mutex);
 	while (num(buffer) == buffer->count)
 		pthread_cond_wait(&buffer->cond, &buffer->mutex);
 
-	ret = buffer->array[buffer->head];
-
+	void *ret = buffer->array[buffer->head];
 	pthread_mutex_unlock(&buffer->mutex);
 
 	return ret;
@@ -65,14 +59,11 @@ void seomBufferHeadAdvance(seomBuffer *buffer)
 
 void *seomBufferTail(seomBuffer *buffer)
 {
-	void *ret = NULL;
-
 	pthread_mutex_lock(&buffer->mutex);
 	while (num(buffer) == 0)
 		pthread_cond_wait(&buffer->cond, &buffer->mutex);
 
-	ret = buffer->array[buffer->tail];
-
+	void *ret = buffer->array[buffer->tail];
 	pthread_mutex_unlock(&buffer->mutex);
 
 	return ret;
@@ -81,7 +72,7 @@ void *seomBufferTail(seomBuffer *buffer)
 void seomBufferTailAdvance(seomBuffer *buffer)
 {
 	pthread_mutex_lock(&buffer->mutex);
-	
+
 	buffer->tail = (buffer->tail + 1) % buffer->count;
 
 	pthread_mutex_unlock(&buffer->mutex);

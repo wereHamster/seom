@@ -169,26 +169,31 @@ int main(int argc, char *argv[])
 	unsigned char *sourceData = (unsigned char *)mmap(0, statBuffer.st_size, PROT_READ, MAP_SHARED, inFile, 0);
 
 	unsigned char *currentPosition = sourceData;
-
-	uint32_t width = ntohl(*(uint32_t *) currentPosition);
+	seomStreamPacket *streamPacket = (seomStreamPacket *) currentPosition;
+	currentPosition += sizeof(seomStreamPacket);
+	seomStreamMap *streamMap = (seomStreamMap *) currentPosition;
+	currentPosition += sizeof(seomStreamMap);
+	fprintf(stderr, "subStreamID: 0x%02x, contentTypeID: 0x%02x\n", streamMap->subStreamID, streamMap->contentTypeID);
+	uint32_t width = *(uint32_t *) currentPosition;
 	currentPosition += sizeof(uint32_t);
-	uint32_t height = ntohl(*(uint32_t *) currentPosition);
+	uint32_t height = *(uint32_t *) currentPosition;
 	currentPosition += sizeof(uint32_t);
+	
+	fprintf(stderr, "offset: %ld\n", currentPosition - sourceData);
+	
+	printf("Video: %u:%u pixels\n", width, height);
 
 	uint64_t cFrameTotal = 0;
 	unsigned char *mem = currentPosition;
 	uint64_t time[2];
 	time[0] = *(uint64_t *) mem;
-	time[1] = 0;
+	time[1] = (*(uint64_t *) mem) + 100000000;
 	for (;;) {
-		if (mem >= sourceData + statBuffer.st_size) {
+		if (mem >= sourceData + statBuffer.st_size)
 			break;
-		}
 
-		time[1] = *(uint64_t *) mem;
-		mem += sizeof(uint64_t);
-		uint32_t cSize = *(uint32_t *) mem;
-		mem += sizeof(uint32_t) + cSize;
+		streamPacket = (seomStreamPacket *) mem;
+		mem += sizeof(seomStreamPacket) + streamPacket->payloadLength;
 
 		++cFrameTotal;
 
@@ -272,13 +277,11 @@ int main(int argc, char *argv[])
 	int pause = 0;
 
 	for (;;) {
-		pts = *(uint64_t *) currentPosition;
-		currentPosition += sizeof(uint64_t);
-
-		uint32_t cSize = *(uint32_t *) currentPosition;
-		currentPosition += sizeof(uint32_t);
+		streamPacket = (seomStreamPacket *) currentPosition;
+		currentPosition += sizeof(seomStreamPacket) + sizeof(uint64_t);
 
 		seomCodecDecode(yuvImage, currentPosition, width * height * 3 / 2);
+		currentPosition += streamPacket->payloadLength;
 		
 		uint8_t *dst = (uint8_t *) img->data + img->offsets[0] + img->pitches[0] * (height - 1);
 		uint8_t *src = yuvImage;
@@ -298,16 +301,15 @@ int main(int argc, char *argv[])
 
 		}
 
-		currentPosition += cSize;
-
 		gettimeofday(&currentTime, 0);
 		uint64_t now = currentTime.tv_sec * 1000000 + currentTime.tv_usec;
 		int64_t s = pts - now + tdiff;
-		if (s > 0) {
+		/*if (s > 0) {
 			usleep((uint64_t) s);
 		} else {
 			tdiff = now - pts;
-		}
+		}*/
+		usleep((uint64_t) 10000);
 		XvShmPutImage(dpy, xvport, win, gc, img, 0, 0, width, height, xOffset, yOffset, dWidth, dHeight, False);
 		XSync(dpy, False);
 
@@ -397,18 +399,15 @@ display:
 		}
 
 		if (1) {
-			currentPosition = sourceData + 2 * sizeof(uint32_t);
+			currentPosition = sourceData + sizeof(seomStreamPacket) + sizeof(seomStreamMap) + sizeof(uint32_t) * 2;
 			for (unsigned int i = 0; i < fIndex; ++i) {
 				if (currentPosition >= sourceData + statBuffer.st_size) {
 					break;
 				}
 
-				pts = *(uint64_t *) currentPosition;
-				currentPosition += sizeof(uint64_t);
-				uint32_t cSize = *(uint32_t *) currentPosition;
-				currentPosition += sizeof(uint32_t) + cSize;
+				streamPacket = (seomStreamPacket *) currentPosition;
+				currentPosition += sizeof(seomStreamPacket) + streamPacket->payloadLength;
 			}
-			pts = *(uint64_t *) currentPosition;
 
 			if (skipFrames > 1 || skipFrames < 0) {
 				gettimeofday(&currentTime, 0);

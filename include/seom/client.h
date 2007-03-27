@@ -23,6 +23,7 @@ typedef struct seomClient {
 	} stat;
 	
 	seomStream *stream;
+	unsigned char videoSubStreamID;
 } seomClient;
 
 typedef struct seomClientConfig {
