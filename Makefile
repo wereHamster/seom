@@ -16,7 +16,7 @@ include config.make
 OBJS = src/buffer.o src/client.o src/codec.o src/frame.o src/opengl.o \
        src/server.o src/stream.o src/arch/$(ARCH)/frame.o
 
-APPS = filter player server
+APPS = player server filter
 playerLIBS = -lX11 -lXv
 
 .PHONY: all clean install
