@@ -10,12 +10,14 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <limits.h>
 
 #include <sys/mman.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include <sys/stat.h>
+#include <sys/uio.h>
 
 #include <dlfcn.h>
 #include <fcntl.h>

@@ -52,9 +52,13 @@ unsigned char seomStreamInsert(seomStream *stream, unsigned char contentTypeID, 
 			seomStreamPacket streamPacket = { 0, sizeof(seomStreamMap) + length };
 			seomStreamMap streamMap = { subStreamID, contentTypeID };
 
-			write(stream->fileDescriptor, &streamPacket, sizeof(streamPacket));
-			write(stream->fileDescriptor, &streamMap, sizeof(streamMap));
-			write(stream->fileDescriptor, payload, length);
+			const struct iovec vec[3] = {
+				{ &streamPacket, sizeof(streamPacket) },
+				{ &streamMap, sizeof(streamMap) },
+				{ payload, length }
+			};
+
+			writev(stream->fileDescriptor, vec, 3);
 
 			return subStreamID;
 		}
@@ -66,9 +70,12 @@ unsigned char seomStreamInsert(seomStream *stream, unsigned char contentTypeID, 
 void seomStreamPut(seomStream *stream, unsigned char subStreamID, unsigned long length, void *payload)
 {
 	seomStreamPacket streamPacket = { subStreamID, length };
+	const struct iovec vec[2] = {
+		{ &streamPacket, sizeof(streamPacket) },
+		{ payload, length }
+	};
 
-	write(stream->fileDescriptor, &streamPacket, sizeof(streamPacket));
-	write(stream->fileDescriptor, payload, length);
+	writev(stream->fileDescriptor, vec, 2);
 }
 
 void seomStreamRemove(seomStream *stream, unsigned char subStreamID)
