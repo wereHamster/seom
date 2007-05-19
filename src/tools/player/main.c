@@ -186,13 +186,14 @@ int main(int argc, char *argv[])
 	uint64_t cFrameTotal = 0;
 	unsigned char *mem = currentPosition;
 	uint64_t time[2];
-	time[0] = *(uint64_t *) mem;
+	time[0] = *(uint64_t *) (mem + sizeof(seomStreamPacket));
 	time[1] = (*(uint64_t *) mem) + 100000000;
 	for (;;) {
 		if (mem >= sourceData + statBuffer.st_size)
 			break;
 
 		streamPacket = (seomStreamPacket *) mem;
+		time[1] = *(uint64_t *) (mem + sizeof(seomStreamPacket));
 		mem += sizeof(seomStreamPacket) + streamPacket->payloadLength;
 
 		++cFrameTotal;
@@ -266,7 +267,7 @@ int main(int argc, char *argv[])
 
 	XSync(dpy, False);
 
-	uint64_t firstFrame = *(uint64_t *) currentPosition;
+	uint64_t firstFrame = *(uint64_t *) (currentPosition + sizeof(seomStreamPacket));
 	uint64_t pts = firstFrame;
 
 	gettimeofday(&currentTime, 0);
@@ -278,7 +279,9 @@ int main(int argc, char *argv[])
 
 	for (;;) {
 		streamPacket = (seomStreamPacket *) currentPosition;
-		currentPosition += sizeof(seomStreamPacket) + sizeof(uint64_t);
+		currentPosition += sizeof(seomStreamPacket);
+		pts = *(uint64_t *) currentPosition;
+		currentPosition += sizeof(uint64_t);
 
 		seomCodecDecode(yuvImage, currentPosition, width * height * 3 / 2);
 		currentPosition += streamPacket->payloadLength;
@@ -304,11 +307,11 @@ int main(int argc, char *argv[])
 		gettimeofday(&currentTime, 0);
 		uint64_t now = currentTime.tv_sec * 1000000 + currentTime.tv_usec;
 		int64_t s = pts - now + tdiff;
-		/*if (s > 0) {
+		if (s > 0) {
 			usleep((uint64_t) s);
 		} else {
 			tdiff = now - pts;
-		}*/
+		}
 		usleep((uint64_t) 10000);
 		XvShmPutImage(dpy, xvport, win, gc, img, 0, 0, width, height, xOffset, yOffset, dWidth, dHeight, False);
 		XSync(dpy, False);
