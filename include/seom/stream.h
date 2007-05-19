@@ -7,12 +7,12 @@
 typedef struct {
 	uint8_t subStreamID;
 	uint64_t payloadLength;
-} seomStreamPacket;
+} __attribute__((packed)) seomStreamPacket;
 
 typedef struct {
 	uint8_t subStreamID;
 	uint8_t contentTypeID;
-} seomStreamMap;
+} __attribute__((packed)) seomStreamMap;
 
 typedef struct seomStream {
 	int fileDescriptor;
