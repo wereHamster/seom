@@ -20,18 +20,26 @@ static void writeFrame(int fd, seomFrame * frame, uint32_t width, uint32_t heigh
 {
 	static const char header[] = "FRAME\n";
 	write(fd, header, sizeof(header) - 1);
+	
+	struct iovec vec[height];
 
 	uint8_t *data = (uint8_t *) & frame->data[0];
 
-	for (uint32_t y = height - 1; y < height; --y)
-		write(fd, data + y * width, width);
-
-	data += width * height;
+	for (uint32_t y = height - 1; y < height; --y) {
+		vec[y].iov_base = data;
+		vec[y].iov_len = width;
+		data += width;
+	}
+	
+	writev(fd, vec, height);
 
 	for (int i = 0; i < 2; ++i) {
-		for (uint32_t y = (height / 2) - 1; y < (height / 2); --y)
-			write(fd, data + y * (width / 2), (width / 2));
-		data += width * height / 4;
+		for (uint32_t y = (height / 2) - 1; y < (height / 2); --y) {
+			vec[y].iov_base = data;
+			vec[y].iov_len = width / 2;
+			data += width / 2;
+		}
+		writev(fd, vec, height / 2);
 	}
 }
 
