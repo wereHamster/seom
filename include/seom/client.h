@@ -34,7 +34,7 @@ typedef struct seomClientConfig {
 } seomClientConfig;
 
 seomClient *seomClientCreate(seomClientConfig *config);
-void seomClientCapture(seomClient *client, uint32_t xoffset, uint32_t yoffset);
+void seomClientCapture(seomClient *client, unsigned long xoff, unsigned long yoff);
 void seomClientDestroy(seomClient *client);
 
 #endif /* __SEOM_CLIENT_H__ */

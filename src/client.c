@@ -8,7 +8,7 @@ static void copyFrame(seomFrame *dst, seomFrame *src, uint32_t size[2], uint32_t
 	while (scale--) {
 		seomFrameResample(src, tmp);
 		tmp[0] >>= 1; tmp[1] >>= 1;
-	};
+	}
 
 	seomFrameConvert(dst, src, tmp);
 }
@@ -105,7 +105,7 @@ void seomClientDestroy(seomClient *client)
 	free(client);
 }
 
-void seomClientCapture(seomClient *client, uint32_t xoffset, uint32_t yoffset)
+void seomClientCapture(seomClient *client, unsigned long xoff, unsigned long yoff)
 {
 	const unsigned long bufferStatus = seomBufferStatus(client->buffer);
 
@@ -125,14 +125,13 @@ void seomClientCapture(seomClient *client, uint32_t xoffset, uint32_t yoffset)
 	client->stat.lastCapture = timeCurrent;
 
 	const double tDelay = client->stat.captureDelay - tElapsed;
-
 	const double delayMargin = client->stat.captureInterval / 10.0;
 	if (tDelay < delayMargin) {
 		if (bufferStatus) {
 			seomFrame *frame = seomBufferHead(client->buffer);
 			
 			frame->pts = timeCurrent;
-			glReadPixels(xoffset, yoffset, client->size[0], client->size[1], GL_BGRA, GL_UNSIGNED_BYTE, &frame->data[0]);
+			glReadPixels(xoff, yoff, client->size[0], client->size[1], GL_BGRA, GL_UNSIGNED_BYTE, &frame->data[0]);
 
 			seomBufferHeadAdvance(client->buffer);
 
