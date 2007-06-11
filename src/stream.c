@@ -39,7 +39,9 @@ seomStream *seomStreamCreate(char *spec)
 		free(stream);
 		return NULL;
 	}
-	
+
+	memset(stream->subStreams, 0, sizeof(stream->subStreams));
+
 	return stream;
 }
 
