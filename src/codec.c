@@ -33,7 +33,7 @@ void *seomCodecEncode(void *dst, const void *src, unsigned long size)
 	for (int i = 0; i < 4096; ++i)
 		hashtable[i] = src;
 
-	while (src < end - 5) {
+	while (src < end - 4) {
 		if (u32(src) == u32(src + 1)) { /* RLE sequence */
 			uint8_t val = u8(src);
 			src += 5;
@@ -73,7 +73,7 @@ void *seomCodecEncode(void *dst, const void *src, unsigned long size)
 					cbyte = (cbyte << 1) | 1;
 					unsigned long len = 0;
 
-					while (u8(o + len + 4) == u8(src + len + 4) && len < (1 << 11) - 1 && src + len + 4 < end)
+					while (u8(o + len + 4) == u8(src + len + 4) && len < (1 << 11) - 1 && src + len + 5 < end)
 						++len;
 					src += len + 4;
 					if (len < 8 && offset < 1024) { /* 10bits offset, 3bits length */
@@ -129,7 +129,7 @@ void *seomCodecDecode(void *dst, const void *src, unsigned long size)
 	unsigned char counter = 8;
 	uint8_t cbyte = u8(src++);
 
-	while (dst < end - 5) {
+	while (dst < end - 4) {
 		if (counter == 0) { /* fetch control byte */
 			cbyte = u8(src++);
 			counter = 8;
