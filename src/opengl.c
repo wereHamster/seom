@@ -7,7 +7,6 @@
 		func = (__typeof__(func)) glXGetProcAddressARB((const GLubyte *) #funcName); \
 	if (__builtin_expect(func != NULL, 1)) \
 		(*func)(__VA_ARGS__); \
-	else printf("error"); 
 
 static void (*glXGetProcAddressARB(const GLubyte *procName))(void)
 {
