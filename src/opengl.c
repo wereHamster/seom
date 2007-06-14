@@ -7,13 +7,15 @@
 		func = (__typeof__(func)) glXGetProcAddressARB((const GLubyte *) #funcName); \
 	if (__builtin_expect(func != NULL, 1)) \
 		(*func)(__VA_ARGS__); \
+	else printf("error"); 
 
 static void (*glXGetProcAddressARB(const GLubyte *procName))(void)
 {
 	static __typeof__(&glXGetProcAddressARB) func;
-	if (__builtin_expect(func == NULL, 0))
-		func = dlsym(RTLD_DEFAULT, "glXGetProcAddressARB");
-	if (__builtin_expect(func != NULL, 1))
+	if (__builtin_expect(func == NULL, 0)) {
+		void *handle = dlopen("libGL.so.1", RTLD_LAZY);
+		func = dlsym(handle, "glXGetProcAddressARB");
+	} if (__builtin_expect(func != NULL, 1))
 		return (*func)(procName);
 	return NULL;
 }
