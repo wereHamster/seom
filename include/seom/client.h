@@ -5,7 +5,6 @@
 #include <seom/seom.h>
 
 typedef struct seomClient {
-	pthread_mutex_t mutex;
 	pthread_t thread;
 	
 	uint32_t size[2];
@@ -19,7 +18,6 @@ typedef struct seomClient {
 		double captureInterval;
 		double captureDelay;
 		uint64_t lastCapture;
-		double engineInterval;
 	} stat;
 	
 	seomStream *stream;

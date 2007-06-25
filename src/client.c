@@ -29,20 +29,12 @@ static void *clientThread(void *data)
 		if (__builtin_expect(src->pts == 0, 0))
 			break;
 
-		uint64_t start = seomTime();
 		copyFrame(dst, src, client->size, client->scale);
 		*(uint64_t *) codecBuffer = src->pts;
 		void *end = seomCodecEncode(codecBuffer + sizeof(uint64_t), dst->data, size[0] * size[1] * 3 / 2);
 		seomStreamPut(client->stream, client->videoSubStreamID, end - codecBuffer, codecBuffer);
-		double tElapsed = (double) ( seomTime() - start );
 
 		seomQueueFree(client->queue, (seomStreamPacket *) src);
-		
-		const double eDecay = 1.0 / 60.0;
-		pthread_mutex_lock(&client->mutex);
-		client->stat.engineInterval = client->stat.engineInterval * ( 1.0 - eDecay ) + tElapsed * eDecay;
-		pthread_mutex_unlock(&client->mutex);
-		
 	}
 
 	seomQueueFree(client->queue, (seomStreamPacket *) src);
@@ -78,12 +70,10 @@ seomClient *seomClientCreate(seomClientConfig *config)
 
 	client->interval = 1000000.0 / (1.1 * config->fps);	
 	client->stat.captureInterval = client->interval;
-	client->stat.engineInterval = client->interval;
 	client->stat.captureDelay = 0.0;
 
 	client->stat.lastCapture = seomTime();
-	
-	pthread_mutex_init(&client->mutex, NULL);
+
 	pthread_create(&client->thread, NULL, clientThread, client);
 	
 	return client;
@@ -101,7 +91,6 @@ void seomClientDestroy(seomClient *client)
 	seomStreamDestroy(client->stream);
 
 	pthread_join(client->thread, NULL);
-	pthread_mutex_destroy(&client->mutex);
 
 	free(client);
 }
@@ -109,16 +98,9 @@ void seomClientDestroy(seomClient *client)
 void seomClientCapture(seomClient *client, unsigned long xoff, unsigned long yoff)
 {
 	const unsigned long queueLength = seomQueueLength(client->queue);
-	//fprintf(stderr, "%lu\n", queueLength);
 
-	pthread_mutex_lock(&client->mutex);
-	const double eInterval = client->stat.engineInterval;
-	pthread_mutex_unlock(&client->mutex);
-
-	double cInterval = client->stat.captureInterval;
-	double iCorrection = ( eInterval + (-2.0 + queueLength) * 100.0 ) - cInterval;
-
-	client->stat.captureInterval = cInterval * 0.9 + ( cInterval + iCorrection ) * 0.1;
+	const double cInterval = client->stat.captureInterval;
+	client->stat.captureInterval = cInterval * 0.9 + ( cInterval + (-2.0 + queueLength) * 100.0 ) * 0.1;
 	if (client->stat.captureInterval < client->interval)
 		client->stat.captureInterval = client->interval;
 
