@@ -36,10 +36,10 @@
 #include <X11/Xutil.h>
 #include <X11/keysym.h>
 
-#include <seom/buffer.h>
 #include <seom/frame.h>
 #include <seom/codec.h>
 #include <seom/stream.h>
+#include <seom/queue.h>
 #include <seom/client.h>
 
 #define seomTime() ({ struct timeval tv; gettimeofday(&tv, 0); (uint64_t) tv.tv_sec * 1000000 + tv.tv_usec; })

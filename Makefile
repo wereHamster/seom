@@ -13,7 +13,7 @@ LDFLAGS  = -Wl,--as-needed
 
 include config.make
 
-OBJS = src/buffer.o src/client.o src/codec.o src/frame.o src/opengl.o \
+OBJS = src/queue.o src/client.o src/codec.o src/frame.o src/opengl.o \
        src/server.o src/stream.o src/arch/$(ARCH)/frame.o
 
 TOOLS = filter player server

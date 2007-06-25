@@ -11,7 +11,7 @@ typedef struct seomClient {
 	uint32_t size[2];
 	uint32_t scale;
 	
-	seomBuffer *buffer;
+	seomQueue *queue;
 	
 	double interval;
 	

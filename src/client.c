@@ -23,8 +23,9 @@ static void *clientThread(void *data)
 	unsigned long codecBufferLength = sizeof(uint64_t) + size[0] * size[1] * 3;
 	void *codecBuffer = malloc(codecBufferLength); /* FIXME: check return value */
 
+	seomFrame *src;
 	for (;;) {
-		seomFrame *src = seomBufferTail(client->buffer);
+		src = (seomFrame *) seomQueuePop(client->queue);
 		if (__builtin_expect(src->pts == 0, 0))
 			break;
 
@@ -35,7 +36,7 @@ static void *clientThread(void *data)
 		seomStreamPut(client->stream, client->videoSubStreamID, end - codecBuffer, codecBuffer);
 		double tElapsed = (double) ( seomTime() - start );
 
-		seomBufferTailAdvance(client->buffer);
+		seomQueueFree(client->queue, (seomStreamPacket *) src);
 		
 		const double eDecay = 1.0 / 60.0;
 		pthread_mutex_lock(&client->mutex);
@@ -44,7 +45,7 @@ static void *clientThread(void *data)
 		
 	}
 
-	seomBufferTailAdvance(client->buffer);
+	seomQueueFree(client->queue, (seomStreamPacket *) src);
 	seomFrameDestroy(dst);
 
 	return NULL;
@@ -73,7 +74,7 @@ seomClient *seomClientCreate(seomClientConfig *config)
 	
 	client->videoSubStreamID = seomStreamInsert(client->stream, 'v', sizeof(size), size);
 	
-	client->buffer = seomBufferCreate(sizeof(seomFrame) + client->size[0] * client->size[1] * 4, 16);	
+	client->queue = seomQueueCreate();	
 
 	client->interval = 1000000.0 / (1.1 * config->fps);	
 	client->stat.captureInterval = client->interval;
@@ -90,13 +91,13 @@ seomClient *seomClientCreate(seomClientConfig *config)
 
 void seomClientDestroy(seomClient *client)
 {
-	seomFrame *frame = seomBufferHead(client->buffer);
+	seomFrame *frame = (seomFrame *) seomQueueAlloc(client->queue, sizeof(seomFrame));
 	frame->pts = 0;
-	seomBufferHeadAdvance(client->buffer);
+	seomQueuePush(client->queue, (seomStreamPacket *) frame);
 
-	do { } while (seomBufferStatus(client->buffer) < 16);
+	do { } while (seomQueueLength(client->queue) > 0);
 	
-	seomBufferDestroy(client->buffer);
+	seomQueueDestroy(client->queue);
 	seomStreamDestroy(client->stream);
 
 	pthread_join(client->thread, NULL);
@@ -107,14 +108,15 @@ void seomClientDestroy(seomClient *client)
 
 void seomClientCapture(seomClient *client, unsigned long xoff, unsigned long yoff)
 {
-	const unsigned long bufferStatus = seomBufferStatus(client->buffer);
+	const unsigned long queueLength = seomQueueLength(client->queue);
+	//fprintf(stderr, "%lu\n", queueLength);
 
 	pthread_mutex_lock(&client->mutex);
 	const double eInterval = client->stat.engineInterval;
 	pthread_mutex_unlock(&client->mutex);
 
 	double cInterval = client->stat.captureInterval;
-	double iCorrection = ( eInterval + (8.0 - bufferStatus) * 100.0 ) - cInterval;
+	double iCorrection = ( eInterval + (-2.0 + queueLength) * 100.0 ) - cInterval;
 
 	client->stat.captureInterval = cInterval * 0.9 + ( cInterval + iCorrection ) * 0.1;
 	if (client->stat.captureInterval < client->interval)
@@ -127,13 +129,13 @@ void seomClientCapture(seomClient *client, unsigned long xoff, unsigned long yof
 	const double tDelay = client->stat.captureDelay - tElapsed;
 	const double delayMargin = client->stat.captureInterval / 10.0;
 	if (tDelay < delayMargin) {
-		if (bufferStatus) {
-			seomFrame *frame = seomBufferHead(client->buffer);
+		if (queueLength < 8) {
+			seomFrame *frame = (seomFrame *) seomQueueAlloc(client->queue, sizeof(seomFrame) + client->size[0] * client->size[1] * 4);
 			
 			frame->pts = timeCurrent;
 			glReadPixels(xoff, yoff, client->size[0], client->size[1], GL_BGRA, GL_UNSIGNED_BYTE, &frame->data[0]);
 
-			seomBufferHeadAdvance(client->buffer);
+			seomQueuePush(client->queue, (seomStreamPacket *) frame);
 
 			if (tDelay < 0) { // frame too late
 				if (client->stat.captureInterval + tDelay < 0.0) { // lag? drop frame(s) and return to normal frame interval
