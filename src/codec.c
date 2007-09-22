@@ -1,5 +1,5 @@
 
-#include <seom/seom.h>
+#include <seom/codec.h>
 
 /**
  * Based on quicklz (http://www.quicklz.com)

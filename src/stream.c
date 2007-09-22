@@ -1,91 +1,73 @@
 
-#include <seom/seom.h>
+#include <seom/stream.h>
 
-seomStream *seomStreamCreate(char *spec)
+struct seomStream *seomStreamCreate(int fileDescriptor)
 {
-	seomStream *stream = malloc(sizeof(seomStream));
-	if (__builtin_expect(stream == NULL, 0))
+	struct seomStream *stream = malloc(sizeof(struct seomStream));
+	if (stream == NULL)
 		return NULL;
 
-	stream->fileDescriptor = -1;
-	
-	if (strncmp(spec, "file://", 7) == 0) {
-		stream->fileDescriptor = open(&spec[7], O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
-	} else if (strncmp(spec, "path://", 7) == 0) {
-		char buffer[4096];
-		time_t tim = time(NULL);
-		struct tm *tm = localtime(&tim);
-		snprintf(buffer, 4096, "%s/%d-%02d-%02d--%02d:%02d:%02d.seom", &spec[7], tm->tm_year+1900, tm->tm_mon+1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
-		stream->fileDescriptor = open(buffer, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
-	} else if (strncmp(spec, "unix://", 7) == 0) {
-		fprintf(stderr, "unix sockets unsupported !\n");
-	} else if (strncmp(spec, "ipv4://", 7) == 0) {
-		struct sockaddr_in addr = {
-			.sin_family = AF_INET,
-			.sin_port = htons(42803),
-			.sin_addr.s_addr = inet_addr(&spec[7])
-		};
-		
-		stream->fileDescriptor = socket(AF_INET, SOCK_STREAM, 0);
-		connect(stream->fileDescriptor, &addr, sizeof(addr));
-	} else {
-		fprintf(stderr, "unknown spec: %s\n", spec);
-		free(stream);
-		return NULL;
-	}
-	
-	if (stream->fileDescriptor < 0) {
-		perror("seomStreamCreate()");
-		free(stream);
-		return NULL;
-	}
+	stream->fileDescriptor = fileDescriptor;
 
-	memset(stream->subStreams, 0, sizeof(stream->subStreams));
+	stream->buffer.size = 0;
+	stream->buffer.data = NULL;
 
 	return stream;
 }
 
-unsigned char seomStreamInsert(seomStream *stream, unsigned char contentTypeID, unsigned long length, void *payload)
+void seomStreamPut(struct seomStream *stream, struct seomPacket *packet)
 {
-	for (unsigned long subStreamID = 1; subStreamID < 256; ++subStreamID) {
-		if (stream->subStreams[subStreamID] == 0) {
-			stream->subStreams[subStreamID] = 1;
+	if (packet->size > stream->buffer.size) {
+		void *data = realloc(stream->buffer.data, packet->size * 2 + 4096);
+		if (data == NULL)
+			goto out;
 
-			seomStreamPacket streamPacket = { 0, sizeof(seomStreamMap) + length };
-			seomStreamMap streamMap = { subStreamID, contentTypeID };
-
-			const struct iovec vec[3] = {
-				{ &streamPacket, sizeof(streamPacket) },
-				{ &streamMap, sizeof(streamMap) },
-				{ payload, length }
-			};
-
-			writev(stream->fileDescriptor, vec, 3);
-
-			return subStreamID;
-		}
+		stream->buffer.size = packet->size * 2 + 4096;
+		stream->buffer.data = data;
 	}
 
-	return 0;
-}
+	const void *end = seomCodecEncode(stream->buffer.data, seomPacketPayload(packet), packet->size);
+	uint64_t size = end - stream->buffer.data;
 
-void seomStreamPut(seomStream *stream, unsigned char subStreamID, unsigned long length, void *payload)
-{
-	seomStreamPacket streamPacket = { subStreamID, length };
-	const struct iovec vec[2] = {
-		{ &streamPacket, sizeof(streamPacket) },
-		{ payload, length }
+	const struct iovec vec[] = {
+		{ packet, sizeof(struct seomPacket) },
+		{ &size, sizeof(uint64_t) },
+		{ stream->buffer.data, end - stream->buffer.data },
 	};
 
-	writev(stream->fileDescriptor, vec, 2);
+	writev(stream->fileDescriptor, vec, 3);
+
+out:
+	seomPacketDestroy(packet);
 }
 
-void seomStreamRemove(seomStream *stream, unsigned char subStreamID)
+struct seomPacket *seomStreamGet(struct seomStream *stream)
 {
-	stream->subStreams[subStreamID] = 0;
+	struct seomPacket header;
+	uint64_t size;
+
+	const struct iovec vec[] = {
+		{ &header, sizeof(struct seomPacket) },
+		{ &size, sizeof(uint64_t) },
+	};
+
+	if (readv(stream->fileDescriptor, vec, 2) < (ssize_t) (sizeof(struct seomPacket) + sizeof(uint64_t)))
+		return NULL;
+	
+	if (read(stream->fileDescriptor, stream->buffer.data, size) < (ssize_t) size)
+		return NULL;
+
+	struct seomPacket *packet = seomPacketCreate(header.type, header.size);
+	if (packet == NULL)
+		return NULL;
+
+	memcpy(packet, &header, sizeof(struct seomPacket));
+	seomCodecDecode(seomPacketPayload(packet), stream->buffer.data, header.size);
+
+	return packet;
 }
 
-void seomStreamDestroy(seomStream *stream)
+void seomStreamDestroy(struct seomStream *stream)
 {
 	close(stream->fileDescriptor);
 	free(stream);

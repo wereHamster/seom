@@ -13,14 +13,10 @@ LDFLAGS  = -Wl,--as-needed
 
 include config.make
 
-OBJS = src/queue.o src/client.o src/codec.o src/frame.o src/opengl.o \
-       src/server.o src/stream.o src/arch/$(ARCH)/frame.o
-
-TOOLS = filter player server
-playerLIBS = -lX11 -lXv
+OBJS = src/codec.o src/stream.o src/packet.o
 
 .PHONY: all clean install
-all: $(LIBRARY) $(TOOLS)
+all: $(LIBRARY)
 
 %.o: %.asm
 	$(ASM) -m $(ARCH) -f elf -o $@ $<
@@ -30,9 +26,6 @@ all: $(LIBRARY) $(TOOLS)
 
 $(LIBRARY): $(OBJS)
 	$(CC) -shared $(LDFLAGS) -Wl,-soname,$@.$(MAJOR) -o $@ $(OBJS) -ldl -lpthread
-
-$(TOOLS): $(LIBRARY)
-	$(CC) $(CFLAGS) $(LDFLAGS) -L. -o $@ src/tools/$@/main.c -lseom $($@LIBS)
 
 seom.pc: seom.pc.in
 	./seom.pc.in $(PREFIX) $(LIBDIR)
@@ -45,11 +38,9 @@ install: $(LIBRARY) $(TOOLS) seom.pc
 
 	$(call inst,644,art/seom.svg,$(PREFIX)/share/seom,seom.svg)
 	$(call inst,644,include/seom/*,$(PREFIX)/include/seom)
-	$(call inst,755,src/scripts/backup,$(PREFIX)/bin,seom-backup)
-	$(foreach tool,$(TOOLS),$(call inst,755,$(tool),$(PREFIX)/bin,seom-$(tool)))
 
 clean:
-	rm -f $(OBJS) $(LIBRARY) $(TOOLS) seom.pc
+	rm -f $(OBJS) $(LIBRARY) seom.pc
 
 mrproper: clean
 	rm -f config.make
