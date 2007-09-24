@@ -22,16 +22,16 @@ static void __memcpy(void *dst, const void *src, unsigned long len)
 	}
 }
 
-void *seomCodecEncode(void *dst, const void *src, unsigned long size)
+void *seomCodecEncode(void *dst, const void *src, unsigned long size, void *ctx)
 {
 	const void *end = src + size;
-	const void **hashtable = dst + size;
+	void **hashtable = ctx;
 	void *cptr = dst++;
 	uint8_t cbyte = 0;
 	unsigned char counter = 8;
 
 	for (int i = 0; i < 4096; ++i)
-		hashtable[i] = src;
+		hashtable[i] = (void *) src;
 
 	while (src < end - 4) {
 		if (u32(src) == u32(src + 1)) { /* RLE sequence */
@@ -51,7 +51,7 @@ void *seomCodecEncode(void *dst, const void *src, unsigned long size)
 			uint32_t fetch = ntohl(u32(src));
 			unsigned long hash = ((fetch >> 20) ^ (fetch >> 8)) & 0x0fff;
 			const void *o = hashtable[hash];
-			hashtable[hash] = src;
+			hashtable[hash] = (void *) src;
 
 			unsigned long offset = src - o;
 			if (offset < 131072 && offset > 3 && ((ntohl(u32(o)) ^ ntohl(u32(src))) & 0xffffff00) == 0) {
@@ -76,6 +76,7 @@ void *seomCodecEncode(void *dst, const void *src, unsigned long size)
 					while (u8(o + len + 4) == u8(src + len + 4) && len < (1 << 11) - 1 && src + len + 5 < end)
 						++len;
 					src += len + 4;
+
 					if (len < 8 && offset < 1024) { /* 10bits offset, 3bits length */
 						u8(dst++) = (uint8_t) 0xa0 | (len << 2) | (offset >> 8);
 						u8(dst++) = (uint8_t) offset;

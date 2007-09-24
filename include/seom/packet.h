@@ -8,7 +8,7 @@ struct seomPacket {
 	uint8_t type;
 	uint64_t time;
 	uint64_t size;
-};
+} __attribute__((packed));
 
 struct seomPacket *seomPacketCreate(unsigned char type, unsigned long size);
 void *seomPacketPayload(struct seomPacket *packet);

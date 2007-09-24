@@ -27,6 +27,9 @@ all: $(LIBRARY)
 $(LIBRARY): $(OBJS)
 	$(CC) -shared $(LDFLAGS) -Wl,-soname,$@.$(MAJOR) -o $@ $(OBJS) -ldl -lpthread
 
+test: test.c
+	$(CC) $(CFLAGS) -o $@ $< -L. -lseom
+
 seom.pc: seom.pc.in
 	./seom.pc.in $(PREFIX) $(LIBDIR)
 
