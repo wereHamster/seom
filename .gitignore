@@ -1,0 +1,4 @@
+config.make
+
+*.o
+libseom.so
