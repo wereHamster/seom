@@ -17,7 +17,7 @@ OBJS = src/buffer.o src/client.o src/codec.o src/frame.o src/opengl.o \
        src/server.o src/stream.o src/arch/$(ARCH)/frame.o
 
 APPS = filter player server
-playerLIBS = -lX11 -lXv
+playerLIBS = -lX11 -lXv -lXext
 
 .PHONY: all clean install
 all: $(LIBRARY) $(APPS)
