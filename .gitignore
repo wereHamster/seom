@@ -1,4 +1,5 @@
 config.make
+seom.pc
 
 *.o
 libseom.so
